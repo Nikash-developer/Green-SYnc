@@ -20,14 +20,22 @@ async function startServer() {
 
   // Auth
   app.post("/api/login", (req, res) => {
-    const { email, password } = req.body;
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as any;
-    
-    if (user && user.password === password) { // In real app, use bcrypt.compare
-      const { password, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword });
-    } else {
-      res.status(401).json({ error: "Invalid credentials" });
+    try {
+      const { email, password } = req.body;
+      console.log(`Login attempt: ${email}`);
+      const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as any;
+
+      if (user && user.password === password) { // In real app, use bcrypt.compare
+        console.log(`Login success: ${email}`);
+        const { password: _, ...userWithoutPassword } = user;
+        res.json({ user: userWithoutPassword });
+      } else {
+        console.log(`Login failed: ${email} (Invalid credentials)`);
+        res.status(401).json({ error: "Invalid credentials" });
+      }
+    } catch (err) {
+      console.error(`Login error:`, err);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
@@ -36,7 +44,7 @@ async function startServer() {
     const { department, faculty_id } = req.query;
     let query = 'SELECT * FROM assignments';
     const params = [];
-    
+
     if (department) {
       query += ' WHERE department = ?';
       params.push(department);
@@ -44,7 +52,7 @@ async function startServer() {
       query += ' WHERE faculty_id = ?';
       params.push(faculty_id);
     }
-    
+
     const assignments = db.prepare(query).all(...params);
     res.json(assignments);
   });
@@ -75,7 +83,7 @@ async function startServer() {
       INSERT INTO submissions (assignment_id, student_id, file_url)
       VALUES (?, ?, ?)
     `).run(assignment_id, student_id, file_url);
-    
+
     // Update impact stats
     const assignment = db.prepare('SELECT department FROM assignments WHERE id = ?').get(assignment_id) as any;
     if (assignment) {
@@ -85,7 +93,7 @@ async function startServer() {
         ON CONFLICT(id) DO UPDATE SET pages_saved = pages_saved + 10
       `).run(assignment.department);
     }
-    
+
     res.json({ id: info.lastInsertRowid });
   });
 
