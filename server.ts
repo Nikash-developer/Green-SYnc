@@ -28,6 +28,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(cors());
+app.use(express.json());
+
 const dbMiddleware = async (req: any, res: any, next: any) => {
   try {
     const conn = await connectDB();
@@ -42,20 +45,18 @@ const dbMiddleware = async (req: any, res: any, next: any) => {
   }
 };
 
+// --- API ROUTES ---
+// We register these at the top level so they are available immediately for Vercel
+app.use('/api/auth', dbMiddleware, authRoutes);
+app.use('/api/assignments', dbMiddleware, assignmentRoutes);
+app.use('/api/submissions', dbMiddleware, submissionRoutes);
+app.use('/api/upload', dbMiddleware, uploadRoutes);
+app.use('/api/notices', dbMiddleware, noticeRoutes);
+app.use('/api/chatbot', dbMiddleware, chatbotRoutes);
+app.use('/api', dbMiddleware, questionPaperRoutes);
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 async function setupApp() {
-  // --- API ROUTES ---
-  app.use('/api/auth', dbMiddleware, authRoutes);
-  app.use('/api/assignments', dbMiddleware, assignmentRoutes);
-  app.use('/api/submissions', dbMiddleware, submissionRoutes);
-  app.use('/api/upload', dbMiddleware, uploadRoutes);
-  app.use('/api/notices', dbMiddleware, noticeRoutes);
-  app.use('/api/chatbot', dbMiddleware, chatbotRoutes);
-  app.use('/api', dbMiddleware, questionPaperRoutes);
-  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-
-  app.use(cors());
-  app.use(express.json());
-
   // --- VITE MIDDLEWARE ---
   if (process.env.NODE_ENV !== "production") {
     // Dynamically import vite only in development
