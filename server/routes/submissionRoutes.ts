@@ -4,6 +4,6 @@ import { protectRoute, authorizeRole } from '../middlewares/authMiddleware.ts';
 
 const router = express.Router();
 
-router.put('/:id/grade', protectRoute, authorizeRole('Faculty', 'Admin'), gradeSubmission);
+router.put('/:id/grade', protectRoute, authorizeRole('faculty', 'admin'), gradeSubmission);
 
 export default router;

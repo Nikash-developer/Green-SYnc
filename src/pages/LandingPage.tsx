@@ -7,6 +7,7 @@ import {
   Building2, Mail, User, Send
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import demoVideo from '../assets/Demo video.mp4';
 const heroLandingImg = 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=1600';
 const forestEcoImg = 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=900&q=80&auto=format&fit=crop';
 
@@ -488,22 +489,23 @@ export default function LandingPage() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-5xl aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10"
+              className="relative w-full max-w-5xl aspect-video bg-black rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(129,199,132,0.2)] border border-white/10"
             >
               <button
                 onClick={() => setIsWatchDemoOpen(false)}
-                className="absolute top-6 right-6 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center backdrop-blur-md transition-all"
+                className="absolute top-6 right-6 z-10 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-md transition-all border border-white/10"
               >
                 <X size={20} />
               </button>
-              <iframe
-                className="w-full h-full"
-                src="https://www.youtube.com/embed/8q7_aV8nL6c?autoplay=1"
-                title="Green-Sync Demo Video"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              <video
+                className="w-full h-full object-cover"
+                src={demoVideo}
+                controls
+                autoPlay
+                muted
+              >
+                Your browser does not support the video tag.
+              </video>
             </motion.div>
           </div>
         )}

@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.route('/')
     .get(protectRoute, getNotices)
-    .post(protectRoute, authorizeRole('Faculty', 'Admin'), createNotice);
+    .post(protectRoute, authorizeRole('faculty', 'admin'), createNotice);
 
 router.post('/:id/read', protectRoute, markRead);
 
