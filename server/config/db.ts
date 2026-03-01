@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+// import { MongoMemoryServer } from 'mongodb-memory-server'; // Removed for production safety
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -17,10 +17,10 @@ export const connectDB = async () => {
         if (!uri) {
             if (process.env.VERCEL === "1" || process.env.NODE_ENV === "production") {
                 console.error("CRITICAL: MONGO_URI is missing in production environment.");
-                // We don't throw here to avoid crashing the startup, but we'll fail the request later
                 return null;
             }
             console.log("No MONGO_URI found, starting in-memory Hackathon mock DB database...");
+            const { MongoMemoryServer } = await import('mongodb-memory-server');
             const mongoServer = await MongoMemoryServer.create();
             uri = mongoServer.getUri();
         }

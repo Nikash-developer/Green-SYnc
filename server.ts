@@ -1,5 +1,5 @@
 import express from 'express';
-import { createServer as createViteServer } from 'vite';
+// import { createServer as createViteServer } from 'vite'; // Removed from top for production safety
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -58,7 +58,8 @@ async function setupApp() {
 
   // --- VITE MIDDLEWARE ---
   if (process.env.NODE_ENV !== "production") {
-    // Local dev setup with Vite
+    // Dynamically import vite only in development
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
