@@ -28,15 +28,29 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const dbMiddleware = async (req: any, res: any, next: any) => {
+  try {
+    const conn = await connectDB();
+    if (!conn) {
+      return res.status(503).json({
+        error: 'Database connection failed. Please check your MONGO_URI and IP whitelist settings in MongoDB Atlas.'
+      });
+    }
+    next();
+  } catch (err) {
+    res.status(503).json({ error: 'Database service unavailable' });
+  }
+};
+
 async function setupApp() {
   // --- API ROUTES ---
-  app.use('/api/auth', async (req, res, next) => { await connectDB(); next(); }, authRoutes);
-  app.use('/api/assignments', async (req, res, next) => { await connectDB(); next(); }, assignmentRoutes);
-  app.use('/api/submissions', async (req, res, next) => { await connectDB(); next(); }, submissionRoutes);
-  app.use('/api/upload', async (req, res, next) => { await connectDB(); next(); }, uploadRoutes);
-  app.use('/api/notices', async (req, res, next) => { await connectDB(); next(); }, noticeRoutes);
-  app.use('/api/chatbot', async (req, res, next) => { await connectDB(); next(); }, chatbotRoutes);
-  app.use('/api', async (req, res, next) => { await connectDB(); next(); }, questionPaperRoutes);
+  app.use('/api/auth', dbMiddleware, authRoutes);
+  app.use('/api/assignments', dbMiddleware, assignmentRoutes);
+  app.use('/api/submissions', dbMiddleware, submissionRoutes);
+  app.use('/api/upload', dbMiddleware, uploadRoutes);
+  app.use('/api/notices', dbMiddleware, noticeRoutes);
+  app.use('/api/chatbot', dbMiddleware, chatbotRoutes);
+  app.use('/api', dbMiddleware, questionPaperRoutes);
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   app.use(cors());

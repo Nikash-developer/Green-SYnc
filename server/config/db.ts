@@ -3,24 +3,38 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import dotenv from 'dotenv';
 dotenv.config();
 
+let cachedConnection: typeof mongoose | null = null;
+
+
 export const connectDB = async () => {
+    // If we have a cached connection, reuse it
+    if (cachedConnection && mongoose.connection.readyState >= 1) {
+        return cachedConnection;
+    }
+
     try {
-        let uri = process.env.MONGO_URI;
+        let uri = process.env.MONGO_URI || process.env.MONGODB_URI;
         if (!uri) {
             if (process.env.VERCEL === "1" || process.env.NODE_ENV === "production") {
-                throw new Error("CRITICAL: MONGO_URI is missing in production environment. Please add it to your Vercel Environment Variables.");
+                console.error("CRITICAL: MONGO_URI is missing in production environment.");
+                // We don't throw here to avoid crashing the startup, but we'll fail the request later
+                return null;
             }
             console.log("No MONGO_URI found, starting in-memory Hackathon mock DB database...");
             const mongoServer = await MongoMemoryServer.create();
             uri = mongoServer.getUri();
         }
-        const conn = await mongoose.connect(uri);
+
+        console.log("Attempting to connect to MongoDB...");
+        const conn = await mongoose.connect(uri, {
+            serverSelectionTimeoutMS: 5000, // Timeout after 5s
+        });
+
+        cachedConnection = conn;
         console.log(`MongoDB Connected: ${conn.connection.host}`);
+        return conn;
     } catch (error) {
-        console.error(`Database Error: ${(error as Error).message}`);
-        if (process.env.VERCEL === "1") {
-            // Re-throw so Vercel can catch it in logs
-            throw error;
-        }
+        console.error(`Database Connection Error: ${(error as Error).message}`);
+        return null;
     }
 };
