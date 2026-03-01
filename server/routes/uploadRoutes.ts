@@ -4,6 +4,6 @@ import { protectRoute, authorizeRole } from '../middlewares/authMiddleware.ts';
 
 const router = express.Router();
 
-router.post('/', protectRoute, authorizeRole('student'), upload.single('file'), uploadFile);
+router.post('/', protectRoute, authorizeRole('Student'), upload.single('file'), uploadFile);
 
 export default router;

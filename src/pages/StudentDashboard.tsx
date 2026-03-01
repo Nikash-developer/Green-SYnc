@@ -9,7 +9,7 @@ import {
   Clock, CheckCircle2, ChevronRight, MessageSquare,
   Send, X, Sparkles, FileQuestion, ExternalLink,
   Upload, File, ChevronLeft, Camera, ShieldAlert,
-  Sun, Moon
+  Sun, Moon, Trash2, Eye, RefreshCcw
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import confetti from 'canvas-confetti';
@@ -39,6 +39,7 @@ interface Course {
   color: string;
   icon: React.ReactNode;
   syllabus: string[];
+  syllabusUrl?: string;
   semester: number;
 }
 
@@ -93,13 +94,26 @@ const NoticeItem: React.FC<{ notice: Notice & { read?: boolean } }> = ({ notice 
             </div>
           </div>
           <p className="text-sm text-slate-500 leading-relaxed mb-3">{notice.content}</p>
-          {notice.id === 2 && (
-            <div className="bg-white p-3 rounded-xl border border-slate-100 flex items-center gap-3 group/file transition-all hover:bg-slate-50">
-              <div className="bg-orange-50 p-2 rounded-lg text-orange-500">
+
+          {(notice.attachment_url || notice.id === 2) && (
+            <motion.div
+              whileHover={{ x: 5 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(notice.attachment_url || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', '_blank');
+              }}
+              className="bg-white p-3 rounded-xl border border-slate-100 flex items-center gap-3 group/file transition-all hover:bg-primary/5 hover:border-primary/20 mt-3 cursor-pointer shadow-sm"
+            >
+              <div className="bg-orange-50 p-2 rounded-lg text-orange-500 group-hover/file:bg-primary/10 group-hover/file:text-primary transition-colors">
                 <FileDown size={16} />
               </div>
-              <span className="text-xs font-bold text-slate-600 group-hover/file:text-[#2B8A3E] transition-colors">Recycling_Drive_Info_Packet.pdf</span>
-            </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-slate-700 group-hover/file:text-primary transition-colors truncate">
+                  {notice.attachment_url ? notice.attachment_url.split('/').pop() : 'Recycling_Drive_Info_Packet.pdf'}
+                </p>
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-0.5">PDF Attachment • Click to view</p>
+              </div>
+            </motion.div>
           )}
         </div>
       </div>
@@ -113,50 +127,119 @@ const AssignmentItem: React.FC<{
   onAction: (action: 'submit' | 'start') => void,
   onDetails: () => void,
   onUpload: (file: File) => void,
+  onDeleteUpload: () => void,
   isActive: boolean,
   timeLeft?: string
-}> = ({ assignment, onRemind, onAction, onDetails, onUpload, isActive, timeLeft }) => {
-  const isUrgent = assignment.id === 2;
+}> = ({ assignment, onRemind, onAction, onDetails, onUpload, onDeleteUpload, isActive, timeLeft }) => {
   const isSubmitted = assignment.status === 'submitted';
   const isInProgress = assignment.status === 'in-progress';
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  const getTimeLeftString = () => {
+    if (isSubmitted) return 'Done';
+    const deadlineDate = new Date(assignment.deadline).getTime();
+    const now = Date.now();
+    const diff = deadlineDate - now;
+    if (diff < 0) return 'Exp';
+
+    const hours = diff / (1000 * 60 * 60);
+    if (hours > 24) return `${Math.ceil(hours / 24)}\nDays`;
+    if (hours > 1) return `${Math.ceil(hours)}\nHrs`;
+    return '<1\nHr';
+  };
+
+  const isUrgent = !isSubmitted && (new Date(assignment.deadline).getTime() - Date.now()) < (24 * 60 * 60000);
+
   return (
     <motion.div
+      layout
       whileHover={{ scale: 1.01 }}
-      onClick={onDetails}
-      className={`flex items-center gap-5 p-6 rounded-2xl border transition-[transform,shadow] duration-300 group cursor-pointer ${isSubmitted ? 'bg-green-50/50 border-green-100' : 'bg-[#F8F9FA] border-slate-100 hover:shadow-md hover:border-slate-200'
+      className={`flex items-center gap-5 p-6 rounded-2xl border transition-[transform,shadow] duration-300 group ${isSubmitted ? 'bg-green-50/50 border-green-100 opacity-80 hover:opacity-100' : 'bg-[#F8F9FA] border-slate-100 hover:shadow-md hover:border-slate-200'
         }`}
     >
       <div className="relative w-14 h-14 shrink-0 flex items-center justify-center">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
           <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" className="text-slate-200" />
-          <circle
+          <motion.circle
+            initial={false}
+            animate={{ strokeDashoffset: isSubmitted ? 0 : 75 }}
             cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3"
-            strokeDasharray={isSubmitted ? "100, 100" : isUrgent ? "25, 100" : "75, 100"}
+            strokeDasharray="100, 100"
             className={isSubmitted ? "text-green-500" : isUrgent ? "text-red-500" : "text-primary"}
           />
         </svg>
         <div className="absolute text-[10px] font-black text-slate-700 text-center leading-tight">
-          {isSubmitted ? 'Done' : assignment.id === 1 ? '2\nDays' : assignment.id === 2 ? '4\nHrs' : '5\nDays'}
+          {getTimeLeftString()}
         </div>
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className={`font-bold truncate group-hover:text-primary transition-colors ${isSubmitted ? 'text-green-700' : 'text-slate-900'}`}>{assignment.title}</h4>
+        <h4 className={`font-bold truncate group-hover:text-primary transition-colors ${isSubmitted ? 'text-green-700 decoration-green-300/50 line-through' : 'text-slate-900'}`}>{assignment.title}</h4>
         <div className="flex flex-col gap-1">
           <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
             {assignment.subject} • {assignment.department}
             {isActive && <span className="ml-2 text-primary animate-pulse font-black">({timeLeft})</span>}
           </p>
-          {assignment.uploadedFile && (
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-md w-fit">
-              <File size={10} />
-              <span>{assignment.uploadedFile.name}</span>
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2 mt-1">
+            {assignment.topic && (
+              <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md uppercase tracking-widest border border-slate-200/50">
+                {assignment.topic}
+              </span>
+            )}
+            {assignment.uploadedFile && (
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-3 mt-2 p-3 bg-primary/5 rounded-2xl border border-primary/10 group/file w-fit"
+              >
+                <div className="bg-white p-2 rounded-xl text-primary shadow-sm group-hover/file:scale-110 transition-transform">
+                  <FileText size={16} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-black text-slate-700 max-w-[150px] truncate">{assignment.uploadedFile.name}</span>
+                  <div className="flex items-center gap-3 mt-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const url = URL.createObjectURL(assignment.uploadedFile!);
+                        window.open(url, '_blank');
+                      }}
+                      className="flex items-center gap-1 text-[9px] font-black text-primary hover:text-primary-dark uppercase tracking-widest bg-white px-2 py-0.5 rounded-lg shadow-sm border border-primary/10 transition-all hover:scale-105"
+                    >
+                      <Eye size={10} /> View PDF
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                      className="flex items-center gap-1 text-[9px] font-black text-blue-500 hover:text-blue-600 uppercase tracking-widest bg-white px-2 py-0.5 rounded-lg shadow-sm border border-blue-100 transition-all hover:scale-105"
+                    >
+                      <RefreshCcw size={10} /> Change
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDeleteUpload(); }}
+                      className="flex items-center gap-1 text-[9px] font-black text-red-500 hover:text-red-600 uppercase tracking-widest bg-white px-2 py-0.5 rounded-lg shadow-sm border border-red-100 transition-all hover:scale-105"
+                    >
+                      <Trash2 size={10} /> Delete
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-2">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onUpload(file);
+          }}
+          accept=".pdf"
+          className="hidden"
+        />
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -168,16 +251,6 @@ const AssignmentItem: React.FC<{
         </button>
         {!isSubmitted && (
           <>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) onUpload(file);
-              }}
-              accept=".pdf"
-              className="hidden"
-            />
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -196,7 +269,7 @@ const AssignmentItem: React.FC<{
                 e.stopPropagation();
                 onRemind();
               }}
-              className="p-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-primary hover:border-primary/30 transition-all"
+              className="p-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-primary hover:border-primary/30 transition-all font-sans"
               title="Remind me later"
             >
               <Clock size={18} />
@@ -208,7 +281,7 @@ const AssignmentItem: React.FC<{
           onClick={(e) => {
             e.stopPropagation();
             if (isSubmitted) return;
-            onAction(assignment.id === 1 ? 'submit' : 'start');
+            onAction((isInProgress || assignment.id === 1) ? 'submit' : 'start');
           }}
           className={`px-8 py-2.5 rounded-xl text-sm font-black transition-all shadow-lg ${isSubmitted
             ? 'bg-green-100 text-green-600 shadow-none cursor-default'
@@ -224,7 +297,7 @@ const AssignmentItem: React.FC<{
           {isSubmitted ? 'Submitted' : isInProgress ? 'In Progress' : assignment.id === 1 ? 'Submit' : assignment.id === 2 ? 'Start' : 'Submit'}
         </button>
       </div>
-    </motion.div>
+    </motion.div >
   );
 };
 
@@ -320,23 +393,31 @@ const AIAssistant: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     if (!input.trim()) return;
 
     const userMsg = input;
+    const token = localStorage.getItem('token');
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setIsTyping(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-      const model = "gemini-3-flash-preview";
-      const response = await ai.models.generateContent({
-        model,
-        contents: `You are a helpful assistant for a student dashboard called Green-Sync. 
-        The site has these tabs: Dashboard (overview), Courses (enrolled classes), Eco-Impact (environmental stats), Question Papers (MU previous papers), and Settings.
-        The user says: ${userMsg}`,
+      const response = await fetch('/api/chatbot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ message: userMsg })
       });
 
-      setMessages(prev => [...prev, { role: 'ai', text: response.text || "I'm sorry, I couldn't process that." }]);
+      const data = await response.json();
+
+      if (data.response) {
+        setMessages(prev => [...prev, { role: 'ai', text: data.response }]);
+      } else {
+        throw new Error(data.error || "Failed to get AI response");
+      }
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'ai', text: "I'm having trouble connecting right now. Try navigating using the top menu!" }]);
+      console.error("AI Assistant Error:", error);
+      setMessages(prev => [...prev, { role: 'ai', text: "I'm having trouble connecting to my brain right now. Please check your internet or try again in a moment!" }]);
     } finally {
       setIsTyping(false);
     }
@@ -410,21 +491,23 @@ const AIAssistant: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
-const LeaderboardItem: React.FC<{ rank: number, name: string, score: string, icon: React.ReactNode, active?: boolean }> = ({ rank, name, score, icon, active = false }) => (
+const LeaderboardItem: React.FC<{ rank: number, name: string, score: string, icon: React.ReactNode, active?: boolean, onClick?: () => void }> = ({ rank, name, score, icon, active = false, onClick }) => (
   <motion.div
-    whileHover={{ x: 5 }}
-    className={`flex items-center gap-4 p-4 rounded-2xl transition-all cursor-pointer ${active ? 'bg-[#E7F5ED] border border-[#D1EAD9]' : 'hover:bg-[#F8F9FA]'
+    whileHover={{ x: 5, backgroundColor: active ? '#E7F5ED' : '#F1F5F9' }}
+    whileTap={{ scale: 0.98 }}
+    onClick={onClick}
+    className={`flex items-center gap-4 p-4 rounded-2xl transition-all cursor-pointer border ${active ? 'bg-[#E7F5ED] border-[#D1EAD9]' : 'bg-transparent border-transparent hover:border-slate-100'
       }`}
   >
     <div className={`font-black text-lg w-6 text-center ${active ? 'text-[#2B8A3E]' : 'text-slate-300'}`}>{rank}</div>
-    <div className="w-11 h-11 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-400 border border-slate-50">
+    <div className="w-11 h-11 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-400 border border-slate-50 group-hover:scale-110 transition-transform">
       {icon}
     </div>
     <div className="flex-1">
-      <p className="font-bold text-sm text-slate-900">{name}</p>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{score}</p>
+      <p className="font-bold text-sm text-slate-900 leading-tight">{name}</p>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{score}</p>
     </div>
-    {active && <Trophy className="text-[#2B8A3E] w-5 h-5" />}
+    {active ? <Trophy className="text-[#2B8A3E] w-5 h-5 animate-pulse" /> : <ChevronRight className="text-slate-300 w-4 h-4" />}
   </motion.div>
 );
 
@@ -575,6 +658,7 @@ export default function StudentDashboard() {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [selectedAssignment, setSelectedAssignment] = useState<AssignmentWithFile | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedLeaderboardDept, setSelectedLeaderboardDept] = useState<{ name: string, rank: number, pages: string, icon: any } | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSemesters, setShowSemesters] = useState(false);
@@ -586,7 +670,23 @@ export default function StudentDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [paperSearchQuery, setPaperSearchQuery] = useState('');
   const [courses, setCourses] = useState<Course[]>([]);
-  const [assignments, setAssignments] = useState<AssignmentWithFile[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentWithFile[]>(() => {
+    const saved = localStorage.getItem('greensync_assignments');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((a: any) => ({
+            ...a,
+            uploadedFile: a.uploadedFileMeta ? new File([], a.uploadedFileMeta.name, { type: 'application/pdf' }) : undefined
+          }));
+        }
+      } catch (e) {
+        console.error("Failed to parse saved assignments", e);
+      }
+    }
+    return [];
+  });
   const [showQuickUpload, setShowQuickUpload] = useState(false);
   const [settingsSubTab, setSettingsSubTab] = useState<'main' | 'profile' | 'notifications' | 'security' | 'appearance' | 'help'>('main');
 
@@ -611,6 +711,15 @@ export default function StudentDashboard() {
   const [saveStatus, setSaveStatus] = useState<boolean>(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [submissionCount, setSubmissionCount] = useState<number>(0);
+
+  useEffect(() => {
+    const dataToSave = assignments.map(a => ({
+      ...a,
+      uploadedFile: undefined,
+      uploadedFileMeta: a.uploadedFile ? { name: a.uploadedFile.name, lastModified: a.uploadedFile.lastModified } : undefined
+    }));
+    localStorage.setItem('greensync_assignments', JSON.stringify(dataToSave));
+  }, [assignments]);
 
   useEffect(() => {
     // Reset settings sub-tab when leaving settings tab
@@ -661,7 +770,6 @@ export default function StudentDashboard() {
         is_emergency: true,
         target_department: 'Biology',
         author_id: 1,
-        image_url: 'https://picsum.photos/seed/biology/800/400'
       },
       {
         id: 2,
@@ -671,7 +779,42 @@ export default function StudentDashboard() {
         is_emergency: false,
         target_department: 'General',
         author_id: 1,
-        image_url: 'https://picsum.photos/seed/recycle/800/400'
+      },
+      {
+        id: 3,
+        title: 'New Eco-Study Material Uploaded',
+        content: 'Prof. Wilson has uploaded new reading material for the Environmental Ethics module. Access it via the Courses tab.',
+        publish_date: new Date(Date.now() - 120 * 60000).toISOString(),
+        is_emergency: false,
+        target_department: 'CS',
+        author_id: 2,
+      },
+      {
+        id: 4,
+        title: 'System Maintenance: ID Verification',
+        content: 'Student portal login will be down for 30 minutes tonight at 11 PM for security upgrades. Plan your submissions accordingly.',
+        publish_date: new Date(Date.now() - 180 * 60000).toISOString(),
+        is_emergency: true,
+        target_department: 'General',
+        author_id: 3,
+      },
+      {
+        id: 5,
+        title: 'Hackathon Registration Open!',
+        content: 'Green-Sync Dev Hack is now accepting registrations. Build sustainable solutions and win eco-friendly prizes.',
+        publish_date: new Date(Date.now() - 240 * 60000).toISOString(),
+        is_emergency: false,
+        target_department: 'CS',
+        author_id: 1,
+      },
+      {
+        id: 6,
+        title: 'Guest Lecture: Renewable Energy',
+        content: 'Join us for a virtual seminar by Dr. Clara Oswald on the future of solar grid integration this Friday at 2 PM.',
+        publish_date: new Date(Date.now() - 300 * 60000).toISOString(),
+        is_emergency: false,
+        target_department: 'General',
+        author_id: 4,
       }
     ];
 
@@ -679,57 +822,58 @@ export default function StudentDashboard() {
       {
         id: 1,
         title: 'Sustainable Architecture Essay',
-        description: 'Write a comprehensive essay on the principles of sustainable architecture and its impact on modern urban planning.',
+        description: 'Write a comprehensive essay on the principles of sustainable architecture.',
+        long_description: 'Write a comprehensive essay on the principles of sustainable architecture and its impact on modern urban planning. Focus on renewable materials, energy efficiency, and community well-being. This assignment requires at least 3 primary sources.',
         subject: 'Environmental Science 204',
         department: 'Prof. Miller',
         deadline: new Date(Date.now() + 2 * 24 * 60 * 60000).toISOString(),
         max_marks: 100,
         faculty_id: 1,
-        status: 'pending'
+        status: 'pending',
+        topic: 'Urban Planning',
+        tags: ['Eco-Design', 'Sustainability', 'Architecture']
       },
       {
         id: 2,
         title: 'Calculus Midterm Prep',
-        description: 'Solve the practice set for the upcoming midterm covering integration and series.',
+        description: 'Solve the practice set for the upcoming midterm covering integration.',
+        long_description: 'Solve the practice set for the upcoming midterm covering integration and series. This includes definite and indefinite integrals, volume by shells, and Taylor series expansions. Show all step-by-step working.',
         subject: 'Math 101',
         department: 'Prof. Davis',
         deadline: new Date(Date.now() + 4 * 60 * 60000).toISOString(),
         max_marks: 100,
         faculty_id: 1,
-        status: 'pending'
+        status: 'pending',
+        topic: 'Integration',
+        tags: ['Derivatives', 'Series', 'Calculus']
       },
       {
         id: 3,
         title: 'History Research Paper',
-        description: 'Research and write about the impact of the Industrial Revolution on social structures.',
+        description: 'Research the impact of the Industrial Revolution on social structures.',
+        long_description: 'Research and write about the impact of the Industrial Revolution on social structures, laborers, and the emergence of the middle class in 19th-century Europe. Minimum 1500 words.',
         subject: 'History 304',
         department: 'Dr. Evans',
         deadline: new Date(Date.now() + 5 * 24 * 60 * 60000).toISOString(),
         max_marks: 100,
         faculty_id: 1,
-        status: 'pending'
+        status: 'pending',
+        topic: 'Modern History',
+        tags: ['Society', 'Industry', 'Revolution']
       },
       {
         id: 4,
         title: 'Database Schema Design',
-        description: 'Create an ER diagram and normalized schema for a university management system.',
+        description: 'Create an ER diagram for a university management system.',
+        long_description: 'Create an ER diagram and normalized schema for a university management system. Ensure 3NF compliance and include all primary and foreign key constraints. Use Mermaid or MySQL Workbench for the diagram.',
         subject: 'DBMS 202',
         department: 'Prof. Wilson',
         deadline: new Date(Date.now() + 1 * 24 * 60 * 60000).toISOString(),
         max_marks: 50,
         faculty_id: 2,
-        status: 'pending'
-      },
-      {
-        id: 5,
-        title: 'React Component Lifecycle',
-        description: 'Implement a complex dashboard using React hooks and lifecycle methods.',
-        subject: 'Web Dev 301',
-        department: 'Dr. Smith',
-        deadline: new Date(Date.now() + 3 * 24 * 60 * 60000).toISOString(),
-        max_marks: 75,
-        faculty_id: 3,
-        status: 'pending'
+        status: 'pending',
+        topic: 'Normalization',
+        tags: ['SQL', 'Database', 'ERD']
       }
     ];
 
@@ -747,112 +891,40 @@ export default function StudentDashboard() {
     ];
 
     const mockCourses: Course[] = [
-      {
-        id: 1,
-        title: "Biology 101",
-        instructor: "Dr. Sarah Miller",
-        progress: 85,
-        color: "blue",
-        icon: <Leaf size={24} />,
-        semester: 3,
-        syllabus: [
-          "Introduction to Cell Biology: Structure and Function",
-          "Molecular Genetics: DNA Replication and Protein Synthesis",
-          "Evolutionary Biology: Natural Selection and Adaptation",
-          "Ecology and Ecosystems: Energy Flow and Nutrient Cycles",
-          "Human Anatomy: Systems and Physiology",
-          "Plant Biology: Photosynthesis and Growth"
-        ]
-      },
-      {
-        id: 2,
-        title: "Calculus II",
-        instructor: "Prof. James Davis",
-        progress: 45,
-        color: "purple",
-        icon: <Calculator size={24} />,
-        semester: 3,
-        syllabus: [
-          "Techniques of Integration: Substitution and Parts",
-          "Applications of Integration: Area and Volume",
-          "Infinite Sequences and Series: Convergence Tests",
-          "Power Series and Taylor Series",
-          "Parametric Equations and Polar Coordinates",
-          "Vector Calculus Basics"
-        ]
-      },
-      {
-        id: 3,
-        title: "World History",
-        instructor: "Dr. Robert Evans",
-        progress: 92,
-        color: "orange",
-        icon: <GraduationCap size={24} />,
-        semester: 3,
-        syllabus: [
-          "Ancient Civilizations: Mesopotamia and Egypt",
-          "Classical Greece and Rome: Politics and Culture",
-          "The Middle Ages: Feudalism and the Church",
-          "The Renaissance and Reformation",
-          "The Age of Exploration and Colonialism",
-          "The Industrial Revolution and Global Impact",
-          "World Wars and the Modern Era"
-        ]
-      },
-      {
-        id: 4,
-        title: "Env. Science",
-        instructor: "Prof. Lisa Green",
-        progress: 60,
-        color: "green",
-        icon: <TreePine size={24} />,
-        semester: 4,
-        syllabus: [
-          "Environmental Ethics and Policy",
-          "Ecosystem Dynamics and Biodiversity",
-          "Climate Change: Causes and Mitigation",
-          "Sustainable Resource Management",
-          "Pollution Control and Waste Management",
-          "Renewable Energy Technologies"
-        ]
-      },
-      {
-        id: 5,
-        title: "English Lit",
-        instructor: "Dr. Emily White",
-        progress: 30,
-        color: "pink",
-        icon: <BookOpen size={24} />,
-        semester: 4,
-        syllabus: [
-          "Shakespearean Drama: Tragedy and Comedy",
-          "Victorian Poetry: Themes of Industry and Faith",
-          "Modernist Fiction: Stream of Consciousness",
-          "Post-colonial Literature: Identity and Power",
-          "Contemporary Global Fiction",
-          "Literary Criticism and Theory"
-        ]
-      },
-      {
-        id: 6,
-        title: "Introduction to Psychology",
-        instructor: "Dr. Mark Sloan",
-        progress: 10,
-        color: "blue",
-        icon: <User size={24} />,
-        semester: 1,
-        syllabus: ["Basics of Psychology", "Cognitive Processes", "Social Behavior"]
-      },
-      {
-        id: 7,
-        title: "Physics I",
-        instructor: "Prof. Alan Grant",
-        progress: 0,
-        color: "purple",
-        icon: <Zap size={24} />,
-        semester: 1,
-        syllabus: ["Mechanics", "Thermodynamics", "Waves"]
-      }
+      // Semester 1
+      { id: 101, title: "Applied Mathematics I", instructor: "Dr. A. Sharma", progress: 100, color: "blue", icon: <Calculator size={24} />, semester: 1, syllabus: ["Matrices", "Complex Numbers", "Integration Basics"], syllabusUrl: "https://mu.ac.in/syllabus/math1.pdf" },
+      { id: 102, title: "Engineering Physics I", instructor: "Prof. R. Mehta", progress: 100, color: "purple", icon: <Zap size={24} />, semester: 1, syllabus: ["Quantum Mechanics", "Crystallography", "Semiconductors"], syllabusUrl: "#" },
+      { id: 103, title: "Basic Electronics", instructor: "Dr. K. Patel", progress: 100, color: "orange", icon: <Zap size={24} />, semester: 1, syllabus: ["Diodes", "BJTs", "Digital Circuits"], syllabusUrl: "#" },
+      { id: 104, title: "Eng. Mechanics", instructor: "Prof. S. Gupta", progress: 100, color: "pink", icon: <Settings size={24} />, semester: 1, syllabus: ["Statics", "Kinematics", "Friction"], syllabusUrl: "#" },
+      { id: 105, title: "Intro. to Computing", instructor: "Dr. V. Shah", progress: 100, color: "green", icon: <Code size={24} />, semester: 1, syllabus: ["Algorithms", "C Basics", "Flowcharts"], syllabusUrl: "#" },
+
+      // Semester 2
+      { id: 201, title: "Applied Mathematics II", instructor: "Dr. A. Sharma", progress: 100, color: "blue", icon: <Calculator size={24} />, semester: 2, syllabus: ["Diff. Equations", "Beta-Gamma", "Numerical Methods"], syllabusUrl: "#" },
+      { id: 202, title: "Engineering Chemistry", instructor: "Dr. P. Desai", progress: 100, color: "green", icon: <Search size={24} />, semester: 2, syllabus: ["Water Tech", "Corrosion", "Nanomaterials"], syllabusUrl: "#" },
+      { id: 203, title: "Structured Prog.", instructor: "Prof. V. Shah", progress: 100, color: "blue", icon: <Code size={24} />, semester: 2, syllabus: ["Pointers", "Structures", "File Handling"], syllabusUrl: "#" },
+      { id: 204, title: "Eng. Graphics", instructor: "Mr. A. Kulkarni", progress: 100, color: "purple", icon: <Palette size={24} />, semester: 2, syllabus: ["Orthographic", "Projections", "CAD"], syllabusUrl: "#" },
+      { id: 205, title: "Env. Studies", instructor: "Dr. L. Green", progress: 100, color: "green", icon: <Leaf size={24} />, semester: 2, syllabus: ["Ecosystems", "Biodiversity", "Pollution"], syllabusUrl: "#" },
+
+      // Semester 3
+      { id: 1, title: "Biology 101", instructor: "Dr. Sarah Miller", progress: 85, color: "blue", icon: <Leaf size={24} />, semester: 3, syllabus: ["Cell Biology", "Genetics", "Plant Physiology"], syllabusUrl: "https://www.biology-online.org/syllabus.pdf" },
+      { id: 2, title: "Calculus II", instructor: "Prof. James Davis", progress: 45, color: "purple", icon: <Calculator size={24} />, semester: 3, syllabus: ["Techniques of Integration", "Sequences & Series", "Taylor Series"], syllabusUrl: "#" },
+      { id: 3, title: "World History", instructor: "Dr. Robert Evans", progress: 92, color: "orange", icon: <GraduationCap size={24} />, semester: 3, syllabus: ["Ancient Civilizations", "Renaissance", "Revolutions"], syllabusUrl: "#" },
+      { id: 304, title: "Data Structures", instructor: "Dr. N. Kumar", progress: 10, color: "blue", icon: <Code size={24} />, semester: 3, syllabus: ["Linked Lists", "Trees", "Sorting Algos"], syllabusUrl: "#" },
+      { id: 305, title: "Digital Logic Design", instructor: "Prof. M. Rao", progress: 5, color: "pink", icon: <Zap size={24} />, semester: 3, syllabus: ["Logic Minimalism", "Sequential Circuits", "FSMs"], syllabusUrl: "#" },
+
+      // Semester 4
+      { id: 4, title: "Environmental Science", instructor: "Prof. Lisa Green", progress: 0, color: "green", icon: <TreePine size={24} />, semester: 4, syllabus: ["Sustainable Dev", "Ecosystems", "Global Policy"], syllabusUrl: "#" },
+      { id: 5, title: "English Literature", instructor: "Dr. Emily White", progress: 0, color: "pink", icon: <BookOpen size={24} />, semester: 4, syllabus: ["Poetry", "Prose", "Literary Theory"], syllabusUrl: "#" },
+      { id: 403, title: "Operating Systems", instructor: "Dr. S. Nadar", progress: 0, color: "blue", icon: <LayoutDashboard size={24} />, semester: 4, syllabus: ["Process Mgmt", "Memory Mgmt", "Storage"], syllabusUrl: "#" },
+      { id: 404, title: "Comp. Architecture", instructor: "Prof. D. Joshi", progress: 0, color: "purple", icon: <Settings size={24} />, semester: 4, syllabus: ["CPU Design", "Control Units", "Pipelining"], syllabusUrl: "#" },
+      { id: 405, title: "Discrete Structures", instructor: "Dr. H. Iyer", progress: 0, color: "orange", icon: <Calculator size={24} />, semester: 4, syllabus: ["Graph Theory", "Logic", "Combinatorics"], syllabusUrl: "#" },
+
+      // Semester 5-8
+      { id: 501, title: "Database Systems", instructor: "Dr. Y. Rao", progress: 0, color: "blue", icon: <FileText size={24} />, semester: 5, syllabus: ["RDBMS", "NoSQL", "Query Opt"], syllabusUrl: "#" },
+      { id: 502, title: "Microprocessors", instructor: "Prof. S. Sen", progress: 0, color: "purple", icon: <Zap size={24} />, semester: 5, syllabus: ["Intel 8085", "8051 Micro", "Assembly"], syllabusUrl: "#" },
+      { id: 601, title: "Software Engineering", instructor: "Dr. A. Paul", progress: 0, color: "green", icon: <Sparkles size={24} />, semester: 6, syllabus: ["SDLC", "Agile", "Testing"], syllabusUrl: "#" },
+      { id: 701, title: "Art. Intelligence", instructor: "Dr. P. Mani", progress: 0, color: "blue", icon: <Sparkles size={24} />, semester: 7, syllabus: ["Heuristics", "ML", "Expert Sys"], syllabusUrl: "#" },
+      { id: 801, title: "Project Phase II", instructor: "Dept. Head", progress: 0, color: "orange", icon: <GraduationCap size={24} />, semester: 8, syllabus: ["Thesis", "Implementation", "Viva"], syllabusUrl: "#" }
     ];
 
     const fetchPapers = async () => {
@@ -868,7 +940,19 @@ export default function StudentDashboard() {
     };
 
     setNotices(mockNotices);
-    setAssignments(mockAssignments);
+    // Only set assignments if none are saved or the saved list is empty
+    const saved = localStorage.getItem('greensync_assignments');
+    let hasSavedAssignments = false;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        hasSavedAssignments = Array.isArray(parsed) && parsed.length > 0;
+      } catch (e) { }
+    }
+
+    if (!hasSavedAssignments) {
+      setAssignments(mockAssignments);
+    }
     setCourses(mockCourses);
 
     // Fetch real papers from DB instead of mocks
@@ -909,9 +993,9 @@ export default function StudentDashboard() {
         shapes: ['circle', 'square']
       });
 
-      alert(`Successfully submitted the assignment!`);
+      // alert(`Successfully submitted the assignment!`);
     } else {
-      alert(`Successfully started the assignment!`);
+      // alert(`Successfully started the assignment!`);
     }
   };
 
@@ -922,7 +1006,6 @@ export default function StudentDashboard() {
       }
       return a;
     }));
-    alert(`File "${file.name}" uploaded successfully!`);
   };
 
   const [uploadPaperForm, setUploadPaperForm] = useState({
@@ -985,6 +1068,16 @@ export default function StudentDashboard() {
     } finally {
       setIsUploadingPaper(false);
     }
+  };
+
+  const handleDeleteUpload = (id: number) => {
+    setAssignments(prev => prev.map(a => {
+      if (a.id === id) {
+        const { uploadedFile, ...rest } = a;
+        return { ...rest, status: 'in-progress' } as AssignmentWithFile;
+      }
+      return a;
+    }));
   };
 
   const handleViewPaper = (paper: QuestionPaper) => {
@@ -1117,6 +1210,8 @@ export default function StudentDashboard() {
                     <div className="space-y-4">
                       {notices
                         .filter(n => n.title.toLowerCase().includes(searchQuery.toLowerCase()) || n.content.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .sort((a, b) => (b.is_emergency ? 1 : 0) - (a.is_emergency ? 1 : 0))
+                        .slice(0, 3)
                         .map((notice: Notice) => (
                           <NoticeItem key={notice.id} notice={notice} />
                         ))}
@@ -1134,6 +1229,12 @@ export default function StudentDashboard() {
                     <div className="space-y-4">
                       {assignments
                         .filter(a => a.title.toLowerCase().includes(searchQuery.toLowerCase()) || a.subject.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .sort((a, b) => {
+                          const subA = a.status === 'submitted' ? 1 : 0;
+                          const subB = b.status === 'submitted' ? 1 : 0;
+                          if (subA !== subB) return subA - subB;
+                          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+                        })
                         .map((assignment: AssignmentWithFile) => (
                           <AssignmentItem
                             key={assignment.id}
@@ -1142,6 +1243,7 @@ export default function StudentDashboard() {
                             onAction={(action) => handleAssignmentAction(assignment.id, action)}
                             onDetails={() => setSelectedAssignment(assignment)}
                             onUpload={(file) => handleFileUpload(assignment.id, file)}
+                            onDeleteUpload={() => handleDeleteUpload(assignment.id)}
                             isActive={activeAssignmentId === assignment.id}
                             timeLeft={activeAssignmentId === assignment.id ? formatTime(timeLeft) : undefined}
                           />
@@ -1162,16 +1264,28 @@ export default function StudentDashboard() {
                       <LayoutDashboard className="text-slate-300" size={20} />
                     </div>
                     <div className="space-y-4">
-                      <LeaderboardItem rank={1} name="Biology Dept" score="24k pages saved" icon={<GraduationCap />} active />
-                      <LeaderboardItem rank={2} name="History Dept" score="18k pages saved" icon={<BookOpen />} />
-                      <LeaderboardItem rank={3} name="Math Dept" score="15k pages saved" icon={<Calculator />} />
-                      <LeaderboardItem rank={4} name="CS Dept" score="12k pages saved" icon={<Code />} />
+                      {[
+                        { rank: 1, name: "Biology Dept", score: "24k pages saved", icon: <GraduationCap /> },
+                        { rank: 2, name: "History Dept", score: "18k pages saved", icon: <BookOpen /> },
+                        { rank: 3, name: "Math Dept", score: "15k pages saved", icon: <Calculator /> },
+                        { rank: 4, name: "CS Dept", score: "12k pages saved", icon: <Code /> }
+                      ].map((dept) => (
+                        <LeaderboardItem
+                          key={dept.rank}
+                          rank={dept.rank}
+                          name={dept.name}
+                          score={dept.score}
+                          icon={dept.icon}
+                          active={user?.department === dept.name.split(' ')[0]}
+                          onClick={() => setSelectedLeaderboardDept({ ...dept, pages: dept.score.split(' ')[0] })}
+                        />
+                      ))}
                     </div>
                     <div className="mt-10 pt-8 border-t border-slate-50">
-                      <div className="bg-[#F8F9FA] p-8 rounded-[2rem] text-center border border-slate-50">
+                      <div className="bg-primary/5 p-8 rounded-[2rem] text-center border border-primary/10">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Your Department Rank</p>
-                        <p className="text-5xl font-black text-primary mb-2">#5</p>
-                        <p className="text-xs font-bold text-slate-500">Arts & Humanities</p>
+                        <p className="text-5xl font-black text-primary mb-2">#{(user?.department === 'Biology' || user?.department === 'History' || user?.department === 'Math' || user?.department === 'CS') ? '1-4' : '5'}</p>
+                        <p className="text-xs font-bold text-slate-500">{user?.department || 'Computer Engineering'}</p>
                       </div>
                     </div>
                   </section>
@@ -1324,33 +1438,47 @@ export default function StudentDashboard() {
                 />
               </div>
 
+              {/* Enhanced Analytics Section */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Monthly Contribution Chart */}
                 <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
                   <div className="flex items-center justify-between mb-8 z-10 relative">
                     <div>
-                      <h3 className="text-lg font-bold text-slate-900">Monthly Contribution</h3>
-                      <p className="text-xs text-slate-400 font-medium">Tracking paper reduction over 6 months</p>
+                      <h3 className="text-xl font-black text-slate-900">Projected Carbon Savings</h3>
+                      <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">6-Month Trend Analysis</p>
                     </div>
-                    <select className="bg-slate-50 border-none text-xs font-bold rounded-xl px-4 py-2 focus:ring-0 text-slate-600 outline-none">
-                      <option>Last 6 Months</option>
-                      <option>This Year</option>
-                    </select>
+                    <div className="flex gap-2">
+                      <button className="bg-slate-50 text-[10px] font-black uppercase tracking-widest rounded-xl px-4 py-2 text-slate-400 hover:text-primary transition-colors border border-slate-100">Export PDF</button>
+                      <select className="bg-slate-50 border-none text-[10px] font-black uppercase tracking-widest rounded-xl px-4 py-2 focus:ring-0 text-slate-600 outline-none cursor-pointer">
+                        <option>Last 6 Months</option>
+                        <option>This Year</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="h-64 flex items-end justify-between px-4 z-10 relative">
+                  <div className="h-64 flex items-end justify-between px-4 z-10 relative gap-3">
                     {[
-                      { m: 'Jan', v: 45 }, { m: 'Feb', v: 62 }, { m: 'Mar', v: 85 },
-                      { m: 'Apr', v: 48 }, { m: 'May', v: 92 }, { m: 'Jun', v: 75 }
+                      { m: 'Jan', v: 45, co2: '2.1kg' }, { m: 'Feb', v: 62, co2: '3.0kg' }, { m: 'Mar', v: 85, co2: '4.2kg' },
+                      { m: 'Apr', v: 48, co2: '2.4kg' }, { m: 'May', v: 92, co2: '4.6kg' }, { m: 'Jun', v: 75, co2: '3.8kg' }
                     ].map((d, i) => (
                       <div key={i} className="flex flex-col items-center gap-3 flex-1 group/bar">
-                        <div className="w-full max-w-[40px] relative flex flex-col justify-end h-48">
+                        <div className="w-full relative flex flex-col justify-end h-48">
                           <motion.div
                             initial={{ height: 0 }}
                             animate={{ height: `${d.v}%` }}
                             transition={{ duration: 1, delay: i * 0.1, type: "spring" }}
-                            className={`w-full rounded-t-xl transition-colors ${i === 4 ? 'bg-[#2B8A3E] shadow-lg shadow-[#2B8A3E]/20' : 'bg-green-100 group-hover/bar:bg-[#2B8A3E]/70'}`}
-                          />
-                          <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2 py-1.5 rounded-lg opacity-0 group-hover/bar:opacity-100 transition-all pointer-events-none mb-2 font-bold transform -translate-y-2 group-hover/bar:translate-y-0">
-                            {d.v} pgs
+                            className={`w-full rounded-t-2xl transition-all duration-500 overflow-hidden relative ${i === 4 ? 'bg-gradient-to-t from-[#1e612c] to-[#2B8A3E] shadow-lg shadow-[#2B8A3E]/30' : 'bg-slate-100 group-hover/bar:bg-[#E7F5ED]'}`}
+                          >
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent"
+                            />
+                          </motion.div>
+                          <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] px-3 py-2 rounded-xl opacity-0 group-hover/bar:opacity-100 transition-all pointer-events-none mb-2 font-black transform -translate-y-2 group-hover/bar:translate-y-0 shadow-xl z-20 whitespace-nowrap">
+                            <div className="flex flex-col items-center">
+                              <span>{d.v} Pages</span>
+                              <span className="text-primary text-[8px]">{d.co2} CO2 Saving</span>
+                            </div>
                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
                           </div>
                         </div>
@@ -1358,95 +1486,174 @@ export default function StudentDashboard() {
                       </div>
                     ))}
                   </div>
-                  {/* Background grid lines for chart */}
-                  <div className="absolute inset-0 z-0 pointer-events-none flex flex-col justify-between pt-24 pb-12 px-8">
-                    <div className="border-b border-slate-50 w-full"></div>
-                    <div className="border-b border-slate-50 w-full"></div>
-                    <div className="border-b border-slate-50 w-full"></div>
-                    <div className="border-b border-slate-50 w-full"></div>
+                  <div className="absolute inset-0 z-0 pointer-events-none flex flex-col justify-between pt-32 pb-16 px-8">
+                    {[1, 2, 3, 4].map(l => <div key={l} className="border-b border-slate-50 w-full" />)}
                   </div>
                 </div>
 
                 <div className="space-y-8">
+                  {/* Detailed Analysis Card */}
                   <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
-                    <h3 className="text-lg font-bold mb-6 text-slate-900">Resource Analysis</h3>
+                    <h3 className="text-lg font-black text-slate-900 mb-6">Impact Composition</h3>
                     <div className="space-y-6">
-                      <ImpactMetric label="Paper Reduction" value="85%" color="green" />
-                      <ImpactMetric label="Energy Saved" value="42%" color="yellow" />
-                      <ImpactMetric label="Water Conserved" value="12%" color="blue" />
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-primary" /> Assignments
+                          </span>
+                          <span className="text-sm font-black text-slate-900">820 pgs</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: '65%' }} className="h-full bg-primary" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500" /> Test Papers
+                          </span>
+                          <span className="text-sm font-black text-slate-900">310 pgs</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: '25%' }} className="h-full bg-blue-500" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-orange-500" /> Misc Docs
+                          </span>
+                          <span className="text-sm font-black text-slate-900">110 pgs</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: '10%' }} className="h-full bg-orange-500" />
+                        </div>
+                      </div>
                     </div>
+
+                    <button className="w-full mt-8 py-4 bg-slate-50 hover:bg-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all">
+                      View Comprehensive Report
+                    </button>
                   </div>
 
-                  <div className="bg-gradient-to-br from-[#2B8A3E] to-[#1e612c] p-8 rounded-[2rem] shadow-xl shadow-[#2B8A3E]/20 text-white relative overflow-hidden group">
-                    <div className="absolute -right-12 -top-12 w-40 h-40 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-700" />
+                  {/* Dynamic Tip */}
+                  <div className="bg-gradient-to-br from-[#1e612c] via-[#2B8A3E] to-[#37b24d] p-8 rounded-[2rem] shadow-xl shadow-[#2B8A3E]/20 text-white relative overflow-hidden group">
+                    <div className="absolute -right-12 -top-12 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700" />
                     <div className="flex items-center gap-4 mb-4 relative z-10">
                       <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
-                        <Zap size={24} />
+                        <Zap size={24} className="text-yellow-300" />
                       </div>
-                      <h4 className="font-black text-lg">Green Tip</h4>
+                      <h4 className="font-black text-lg">Environmental Score</h4>
                     </div>
-                    <p className="text-sm font-medium leading-relaxed text-white/90 relative z-10">
-                      Digitizing your next 5 assignments will save enough water for a 10-minute shower! Keep up the excellent work.
+                    <div className="flex items-end gap-3 mb-4">
+                      <span className="text-5xl font-black">A+</span>
+                      <span className="text-xs font-bold opacity-80 mb-2">Top 5% Eco-Users</span>
+                    </div>
+                    <p className="text-xs font-medium leading-relaxed text-white/90 relative z-10">
+                      Your digital-first approach in <span className="text-yellow-200">Biology 101</span> has saved more CO2 than 85% of your peers. Keep leading!
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Added deeper analytics graphs area */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col relative">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">Weekly Carbon Output</h3>
-                  <p className="text-xs text-slate-400 font-medium mb-8">Calculated against traditional paper usage</p>
+              {/* Weekly Performance Benchmarks */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {/* Weekly Carbon Output - FIXED */}
+                <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col relative group">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-lg font-black text-slate-900">Weekly Carbon Shield</h3>
+                    <div className="p-2 bg-primary/10 text-primary rounded-lg">
+                      <Shield size={16} />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-8">Daily Prevention (g CO2)</p>
 
-                  <div className="flex-1 flex items-end gap-2 h-40 px-4 mt-auto">
-                    {[34, 45, 23, 56, 12, 60, 20].map((h, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-3 group">
-                        <motion.div
-                          className="w-full bg-[#E7F5ED] rounded-lg group-hover:bg-[#8CE09F] transition-colors relative"
-                          initial={{ height: 0 }}
-                          animate={{ height: `${h}%` }}
-                          transition={{ delay: 0.3 + (i * 0.05), duration: 0.8 }}
-                        />
+                  <div className="flex-1 flex items-end gap-3 h-48 px-2 mt-auto">
+                    {[
+                      { d: 'M', v: 65 }, { d: 'T', v: 45 }, { d: 'W', v: 82 },
+                      { d: 'T', v: 56 }, { d: 'F', v: 95 }, { d: 'S', v: 30 }, { d: 'S', v: 20 }
+                    ].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-3 group/wbar">
+                        <div className="w-full relative h-[140px] flex flex-col justify-end">
+                          <motion.div
+                            className={`w-full rounded-t-xl transition-all duration-300 relative ${i === 4 ? 'bg-primary shadow-lg shadow-primary/20' : 'bg-slate-100 group-hover/wbar:bg-[#8CE09F]'}`}
+                            initial={{ height: 0 }}
+                            animate={{ height: `${h.v}%` }}
+                            transition={{ delay: 0.3 + (i * 0.05), duration: 0.8, type: "spring" }}
+                          >
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[8px] px-2 py-1 rounded-lg opacity-0 group-hover/wbar:opacity-100 transition-all font-bold">
+                              {h.v}g
+                            </div>
+                          </motion.div>
+                        </div>
+                        <span className="text-[10px] font-black text-slate-400 mt-2">{h.d}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="flex justify-between items-center text-[10px] font-black tracking-widest text-slate-300 mt-4 uppercase px-4">
-                    <span>Mon</span>
-                    <span>Sun</span>
+                </div>
+
+                {/* Efficiency Analytics */}
+                <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+                  <h3 className="text-lg font-black text-slate-900 mb-8">Efficiency Benchmarks</h3>
+                  <div className="space-y-8">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Submission Speed</p>
+                        <p className="text-xs font-black text-primary">Fast (+15%)</p>
+                      </div>
+                      <div className="h-6 bg-slate-50 rounded-xl flex items-center px-1">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: '85%' }}
+                          className="h-4 bg-primary rounded-lg flex items-center justify-end pr-2 text-[8px] font-black text-white"
+                        >85%</motion.div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Digital Retention</p>
+                        <p className="text-xs font-black text-blue-500">Peak</p>
+                      </div>
+                      <div className="h-6 bg-slate-50 rounded-xl flex items-center px-1">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: '92%' }}
+                          className="h-4 bg-blue-500 rounded-lg flex items-center justify-end pr-2 text-[8px] font-black text-white"
+                        >92%</motion.div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-50">
+                      <p className="text-[10px] text-slate-400 font-medium italic">Based on your last 10 digital submissions compared to physical printing offsets.</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
-                  <h3 className="text-lg font-bold text-slate-900 mb-8">Assignment Category Analytics</h3>
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs font-bold text-slate-700">
-                        <span>Lab Reports</span>
-                        <span className="text-[#2B8A3E]">42%</span>
+                {/* Departmental Carbon Leader */}
+                <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between overflow-hidden relative">
+                  <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900 mb-2">Dept. Achievement</h3>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-6">Computer Engineering</p>
+
+                    <div className="flex items-center gap-6 mb-8">
+                      <div className="w-20 h-20 rounded-[2rem] bg-slate-900 text-white flex flex-col items-center justify-center shadow-2xl">
+                        <span className="text-2xl font-black">#3</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest opacity-60 text-center">In Univ</span>
                       </div>
-                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: '42%' }} transition={{ duration: 1 }} className="h-full bg-[#2B8A3E] rounded-full" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs font-bold text-slate-700">
-                        <span>Research Papers</span>
-                        <span className="text-blue-500">35%</span>
-                      </div>
-                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: '35%' }} transition={{ duration: 1, delay: 0.1 }} className="h-full bg-blue-500 rounded-full" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs font-bold text-slate-700">
-                        <span>Quizzes & Short Answers</span>
-                        <span className="text-orange-500">23%</span>
-                      </div>
-                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: '23%' }} transition={{ duration: 1, delay: 0.2 }} className="h-full bg-orange-500 rounded-full" />
+                      <div className="space-y-1">
+                        <p className="text-sm font-black text-slate-900">Sustainability Excellence</p>
+                        <p className="text-xs font-medium text-slate-500">Your department has saved over 12,000kg of CO2 this year.</p>
                       </div>
                     </div>
                   </div>
+
+                  <button className="w-full py-4 bg-primary text-white rounded-2xl font-black text-xs hover:bg-primary-dark transition-all shadow-lg shadow-primary/20">
+                    Explore Dept Leaderboard
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -1879,6 +2086,7 @@ export default function StudentDashboard() {
         </AnimatePresence>
       </main>
 
+
       {/* AI Assistant Floating Button */}
       <button
         onClick={() => setIsAIChatOpen(true)}
@@ -1899,30 +2107,31 @@ export default function StudentDashboard() {
 
       {/* Notice View All Modal */}
       <AnimatePresence>
-        {
-          showAllNotices && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowAllNotices(false)}
-                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col"
-              >
-                <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
-                  <h2 className="text-2xl font-black">Official Announcements</h2>
-                  <button onClick={() => setShowAllNotices(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                    <X size={24} />
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                  {notices.map((notice) => (
+        {showAllNotices && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAllNotices(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col"
+            >
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+                <h2 className="text-2xl font-black">Official Announcements</h2>
+                <button onClick={() => setShowAllNotices(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                  <X size={24} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                {notices
+                  .sort((a, b) => (b.is_emergency ? 1 : 0) - (a.is_emergency ? 1 : 0))
+                  .map((notice) => (
                     <div key={notice.id} className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -1937,82 +2146,138 @@ export default function StudentDashboard() {
                           </div>
                         </div>
                       </div>
-                      {/* notice.image_url && (
-                      <img 
-                        src={notice.image_url} 
-                        alt={notice.title} 
-                        className="w-full h-64 object-cover rounded-3xl shadow-lg"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) */}
                       <p className="text-slate-600 leading-relaxed text-lg">{notice.content}</p>
                       <div className="h-px bg-slate-100 w-full" />
                     </div>
                   ))}
-                </div>
-              </motion.div>
-            </div>
-          )
+              </div>
+            </motion.div>
+          </div>
+        )
         }
       </AnimatePresence >
 
       {/* Reminder Modal */}
       <AnimatePresence>
-        {
-          reminderModal.isOpen && (
-            <ReminderModal
-              onClose={() => setReminderModal({ isOpen: false, assignmentId: null })}
-              onSet={(time) => {
-                alert(`Reminder set for ${time}!`);
-                setReminderModal({ isOpen: false, assignmentId: null });
-              }}
-            />
-          )
-        }
-      </AnimatePresence >
+        {reminderModal.isOpen && (
+          <ReminderModal
+            onClose={() => setReminderModal({ isOpen: false, assignmentId: null })}
+            onSet={(time) => {
+              alert(`Reminder set for ${time}!`);
+              setReminderModal({ isOpen: false, assignmentId: null });
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Assignment Details Modal */}
       <AnimatePresence>
-        {
-          selectedAssignment && (
-            <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedAssignment(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl p-8">
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h2 className="text-2xl font-black">{selectedAssignment.title}</h2>
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">{selectedAssignment.subject}</p>
+        {selectedAssignment && (
+          <div className="fixed inset-0 z-[220] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedAssignment(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="relative w-full max-w-xl bg-white rounded-[3rem] shadow-2xl p-10 overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary/40 via-primary to-primary/40" />
+              <div className="flex justify-between items-start mb-8">
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900 leading-tight">{selectedAssignment.title}</h2>
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className="text-primary font-black uppercase tracking-widest text-[10px] bg-primary/5 px-3 py-1 rounded-full border border-primary/10">{selectedAssignment.subject}</span>
+                    <span className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">{selectedAssignment.department}</span>
                   </div>
-                  <button onClick={() => setSelectedAssignment(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
                 </div>
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900 mb-2 uppercase tracking-wider">Description</h4>
-                    <p className="text-slate-600 leading-relaxed">{selectedAssignment.description}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-slate-50 p-4 rounded-2xl">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Deadline</p>
-                      <p className="font-black text-slate-900">{new Date(selectedAssignment.deadline).toLocaleDateString()}</p>
-                    </div>
-                    <div className="bg-slate-50 p-4 rounded-2xl">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Max Marks</p>
-                      <p className="font-black text-slate-900">{selectedAssignment.max_marks}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      handleAssignmentAction(selectedAssignment.id, selectedAssignment.status === 'in-progress' ? 'submit' : 'start');
-                      setSelectedAssignment(null);
-                    }}
-                    className="w-full py-4 bg-primary text-white rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform"
-                  >
-                    {selectedAssignment.status === 'submitted' ? 'Resubmit' : selectedAssignment.status === 'in-progress' ? 'Submit Now' : 'Start Assignment'}
-                  </button>
+                <motion.button
+                  whileHover={{ rotate: 90, scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setSelectedAssignment(null)}
+                  className="p-3 bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-900 rounded-2xl transition-all"
+                >
+                  <X size={20} />
+                </motion.button>
+              </div>
+
+              <div className="space-y-8 max-h-[60vh] overflow-y-auto pr-2 scrollbar-hide">
+                <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100">
+                  <h4 className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.2em]">Assignment Mission</h4>
+                  <p className="text-slate-600 leading-relaxed font-medium">{selectedAssignment.long_description || selectedAssignment.description}</p>
                 </div>
-              </motion.div>
-            </div>
-          )
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-4 text-left">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Key Details</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center shadow-sm">
+                          <Clock size={16} />
+                        </div>
+                        <div>
+                          <p className="text-[10pt] font-black text-slate-900">{new Date(selectedAssignment.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                          <p className="text-[8px] font-bold text-slate-400 uppercase">Submission Window</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center shadow-sm">
+                          <Trophy size={16} />
+                        </div>
+                        <div>
+                          <p className="text-[10pt] font-black text-slate-900">{selectedAssignment.max_marks} Points</p>
+                          <p className="text-[8px] font-bold text-slate-400 uppercase">Weightage</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 text-left">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Focus Topics</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(selectedAssignment.tags || ['Sustainable Living', 'Modern Ethics', 'Case Study']).map((tag: string, idx: number) => (
+                        <span key={idx} className="text-[10px] font-black bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-xl shadow-sm">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#E7F5ED]/30 p-6 rounded-[2rem] border border-[#8CE09F]/20">
+                  <h4 className="text-[10px] font-black text-[#2B8A3E] mb-3 uppercase tracking-widest">Environment Impact Checklist</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                      <CheckCircle2 size={14} className="text-[#2B8A3E]" />
+                      <span>Digital-only submission (Required)</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                      <CheckCircle2 size={14} className="text-[#2B8A3E]" />
+                      <span>Referenced peer-reviewed e-papers</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-10 flex gap-4">
+                <button
+                  onClick={() => setSelectedAssignment(null)}
+                  className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-all"
+                >
+                  Back to Grid
+                </button>
+                <button
+                  onClick={() => {
+                    handleAssignmentAction(selectedAssignment.id, selectedAssignment.status === 'in-progress' ? 'submit' : 'start');
+                    setSelectedAssignment(null);
+                  }}
+                  className="flex-[2] py-4 bg-primary text-white rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-[1.02] transform transition-all active:scale-95"
+                >
+                  {selectedAssignment.status === 'submitted' ? 'Resubmit' : selectedAssignment.status === 'in-progress' ? 'Submit Mission' : 'Accept Assignment'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )
         }
       </AnimatePresence >
 
@@ -2049,7 +2314,16 @@ export default function StudentDashboard() {
                       ))}
                     </div>
                   </div>
-                  <button className="w-full py-4 border-2 border-primary text-primary rounded-2xl font-black hover:bg-primary hover:text-white transition-all">
+                  <button
+                    onClick={() => {
+                      if (selectedCourse.syllabusUrl) {
+                        window.open(selectedCourse.syllabusUrl, '_blank');
+                      } else {
+                        alert("Syllabus PDF is currently being digitized. Please check back later!");
+                      }
+                    }}
+                    className="w-full py-4 border-2 border-primary text-primary rounded-2xl font-black hover:bg-primary hover:text-white transition-all shadow-lg active:scale-95"
+                  >
                     Download Full Syllabus PDF
                   </button>
                 </div>
@@ -2243,6 +2517,89 @@ export default function StudentDashboard() {
           )
         }
       </AnimatePresence >
+      {/* Dept Leaderboard Modal */}
+      <AnimatePresence>
+        {
+          selectedLeaderboardDept && (
+            <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedLeaderboardDept(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                className="relative w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl p-10 overflow-hidden"
+              >
+                <div className="flex justify-between items-start mb-8">
+                  <div className="flex items-center gap-5">
+                    <div className="w-16 h-16 rounded-[1.5rem] bg-primary/10 text-primary flex items-center justify-center shadow-inner">
+                      {selectedLeaderboardDept.icon}
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-black">{selectedLeaderboardDept.name} Overview</h2>
+                      <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-1">Rank #{selectedLeaderboardDept.rank} Global Leaderboard</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedLeaderboardDept(null)} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors"><X size={20} /></button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8 mb-10">
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Department Impact</h4>
+                    <div className="p-6 bg-[#E7F5ED] rounded-[2rem] border border-[#8CE09F]/20 relative overflow-hidden group">
+                      <TreePine className="absolute -right-4 -bottom-4 w-24 h-24 text-[#2B8A3E]/10 group-hover:scale-110 transition-transform" />
+                      <p className="text-4xl font-black text-[#2B8A3E]">{selectedLeaderboardDept.pages}</p>
+                      <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Total Pages Digitized</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Student Engagement</h4>
+                    <div className="p-6 bg-blue-50 rounded-[2rem] border border-blue-100 relative overflow-hidden group">
+                      <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/10 rounded-full group-hover:scale-110 transition-transform" />
+                      <p className="text-4xl font-black text-blue-600">92%</p>
+                      <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Active Participation</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <h4 className="text-sm font-black text-slate-900 mb-4 uppercase tracking-widest">Recent Dept. Announcements</h4>
+                  <div className="space-y-3 max-h-60 overflow-y-auto pr-2 scrollbar-hide">
+                    {notices
+                      .filter(n => n.target_department === selectedLeaderboardDept.name.split(' ')[0] || n.target_department === 'General')
+                      .slice(0, 3)
+                      .map((notice, idx) => (
+                        <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-primary/20 hover:bg-white transition-all group">
+                          <div className="flex items-start gap-4">
+                            <div className={`p-2 rounded-xl shrink-0 ${notice.is_emergency ? 'bg-red-50 text-red-500' : 'bg-primary/5 text-primary'}`}>
+                              {notice.is_emergency ? <AlertCircle size={16} /> : <Megaphone size={16} />}
+                            </div>
+                            <div>
+                              <p className="font-black text-slate-900 group-hover:text-primary transition-colors">{notice.title}</p>
+                              <p className="text-[10px] text-slate-500 line-clamp-1 mt-1">{notice.content}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    {notices.filter(n => n.target_department === selectedLeaderboardDept.name.split(' ')[0]).length === 0 && (
+                      <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                        <p className="text-xs font-bold text-slate-400">No specific assignment notices for this department yet.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedLeaderboardDept(null)}
+                  className="w-full mt-10 py-5 bg-slate-900 text-white rounded-[1.5rem] font-black hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
+                >
+                  Return to Dashboard
+                </button>
+              </motion.div>
+            </div>
+          )
+        }
+      </AnimatePresence >
+
       <AnimatePresence>
         {showEnroll && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
@@ -2368,6 +2725,21 @@ export default function StudentDashboard() {
                 <Upload size={32} />
               </div>
               <h3 className="text-xl font-black text-slate-900 mb-2">Instant Upload</h3>
+              {(() => {
+                const pending = [...assignments]
+                  .filter(a => a.status === 'pending')
+                  .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+                const target = pending[0];
+                return target ? (
+                  <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-4">
+                    Target: {target.title}
+                  </p>
+                ) : (
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                    No pending assignments found
+                  </p>
+                );
+              })()}
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Fast submission portal</p>
 
               <div className="space-y-3">
@@ -2378,6 +2750,18 @@ export default function StudentDashboard() {
                     className="hidden"
                     onChange={(e) => {
                       if (e.target.files?.[0]) {
+                        const file = e.target.files[0];
+                        const pending = [...assignments]
+                          .filter(a => a.status === 'pending')
+                          .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+                        const target = pending[0] || assignments[0];
+
+                        if (target) {
+                          handleFileUpload(target.id, file);
+                          // Force its status to submitted since this is an "Instant Upload"
+                          handleAssignmentAction(target.id, 'submit');
+                        }
+
                         setShowQuickUpload(false);
                         setActiveTab('assignment-submission');
                       }
@@ -2450,6 +2834,6 @@ export default function StudentDashboard() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </div >
   );
 }

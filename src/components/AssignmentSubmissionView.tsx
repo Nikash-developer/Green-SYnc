@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
     Leaf, Clock, Upload, FileText, CheckCircle2,
     AlertCircle, Shield, TreePine, ChevronRight,
-    User, MessageSquare, X, Loader2
+    User, MessageSquare, X, Loader2, RefreshCcw,
+    Trash2, Eye, ExternalLink
 } from 'lucide-react';
 
 interface Feedback {
@@ -48,9 +49,11 @@ interface UpcomingAssignment {
     deadline: Date;
     color: string;
     description: string;
+    status: 'pending' | 'submitted';
+    uploadedFile: File | null;
 }
 
-const mockUpcoming: UpcomingAssignment[] = [
+const mockUpcomingData: UpcomingAssignment[] = [
     {
         id: 1,
         title: "Biodiversity Research Paper",
@@ -58,7 +61,9 @@ const mockUpcoming: UpcomingAssignment[] = [
         courseCode: "BIO-101",
         deadline: new Date(Date.now() + 2 * 24 * 3600000 + 4 * 3600000 + 15 * 60000),
         color: "#22C55E",
-        description: "Upload your research paper on local biodiversity and its conservation strategies."
+        description: "Upload your research paper on local biodiversity and its conservation strategies.",
+        status: 'pending',
+        uploadedFile: null
     },
     {
         id: 2,
@@ -67,7 +72,9 @@ const mockUpcoming: UpcomingAssignment[] = [
         courseCode: "CS-202",
         deadline: new Date(Date.now() + 5 * 24 * 3600000),
         color: "#3B82F6",
-        description: "Submit your normalized schema (up to 3NF) for the provided case study."
+        description: "Submit your normalized schema (up to 3NF) for the provided case study.",
+        status: 'pending',
+        uploadedFile: null
     },
     {
         id: 3,
@@ -76,13 +83,22 @@ const mockUpcoming: UpcomingAssignment[] = [
         courseCode: "HIS-105",
         deadline: new Date(Date.now() + 22 * 3600000), // Less than 24h
         color: "#F59E0B",
-        description: "Analyzation of the post-war industrial boom and its long-term effects."
+        description: "Analyzation of the post-war industrial boom and its long-term effects.",
+        status: 'pending',
+        uploadedFile: null
     }
 ];
 
 export const AssignmentSubmissionView: React.FC = () => {
-    const [selectedAssignment, setSelectedAssignment] = useState<UpcomingAssignment>(mockUpcoming[0]);
-    const [file, setFile] = useState<File | null>(null);
+    const [assignments, setAssignments] = useState<UpcomingAssignment[]>(mockUpcomingData);
+    const [selectedId, setSelectedId] = useState<number>(() => {
+        const pending = mockUpcomingData
+            .filter(a => a.status === 'pending')
+            .sort((a, b) => a.deadline.getTime() - b.deadline.getTime());
+        return pending.length > 0 ? pending[0].id : mockUpcomingData[0].id;
+    });
+    const selectedAssignment = assignments.find(a => a.id === selectedId) || assignments[0];
+
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
     const [plagiarismStatus, setPlagiarismStatus] = useState<'ready' | 'scanning' | 'completed'>('ready');
@@ -91,6 +107,26 @@ export const AssignmentSubmissionView: React.FC = () => {
     const [timeLeft, setTimeLeft] = useState({ days: 0, hrs: 0, min: 0, sec: 0 });
     const [isDragOver, setIsDragOver] = useState(false);
     const [showFeedbackModal, setShowFeedbackModal] = useState<Feedback | null>(null);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (selectedAssignment.status === 'submitted') {
+            setUploadStatus('success');
+            setPlagiarismStatus('completed');
+            setPlagiarismPercent(Math.floor(Math.random() * 8) + 2);
+            setCo2Saved(Math.max(1, Math.ceil((selectedAssignment.uploadedFile?.size || 102400) / 51200)) * 0.5);
+        } else if (selectedAssignment.uploadedFile) {
+            setUploadStatus('success');
+            setPlagiarismStatus('completed');
+            setPlagiarismPercent(Math.floor(Math.random() * 8) + 2);
+            setCo2Saved(Math.max(1, Math.ceil((selectedAssignment.uploadedFile?.size || 102400) / 51200)) * 0.5);
+        } else {
+            setUploadStatus('idle');
+            setPlagiarismStatus('ready');
+            setPlagiarismPercent(0);
+            setCo2Saved(0);
+        }
+    }, [selectedAssignment.id]);
 
     useEffect(() => {
         const updateTimer = () => {
@@ -134,7 +170,6 @@ export const AssignmentSubmissionView: React.FC = () => {
             alert("File size exceeds 25MB limit.");
             return;
         }
-        setFile(selectedFile);
         simulateUpload(selectedFile);
     };
 
@@ -146,13 +181,21 @@ export const AssignmentSubmissionView: React.FC = () => {
                 if (prev >= 100) {
                     clearInterval(interval);
                     setUploadStatus('success');
+
+                    // Update global assignment state
+                    setAssignments(prevArr => prevArr.map(a =>
+                        a.id === selectedAssignment.id
+                            ? { ...a, status: 'submitted', uploadedFile: selectedFile }
+                            : a
+                    ));
+
                     triggerPlagiarismScan();
                     calculateEcoImpact(selectedFile);
                     return 100;
                 }
-                return prev + 5;
+                return prev + 10;
             });
-        }, 150);
+        }, 100);
     };
 
     const triggerPlagiarismScan = () => {
@@ -192,12 +235,19 @@ export const AssignmentSubmissionView: React.FC = () => {
     const formatNumber = (n: number) => n.toString().padStart(2, '0');
 
     const handleAssignmentSwitch = (assignment: UpcomingAssignment) => {
-        setFile(null);
+        setSelectedId(assignment.id);
+    };
+
+    const handleDeleteFile = () => {
+        setAssignments(prev => prev.map(a =>
+            a.id === selectedAssignment.id
+                ? { ...a, status: 'pending', uploadedFile: null }
+                : a
+        ));
         setUploadStatus('idle');
         setPlagiarismStatus('ready');
         setPlagiarismPercent(0);
         setCo2Saved(0);
-        setSelectedAssignment(assignment);
     };
 
     return (
@@ -207,38 +257,50 @@ export const AssignmentSubmissionView: React.FC = () => {
                 <section className="space-y-4">
                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Upcoming Tasks</h3>
                     <div className="space-y-3">
-                        {mockUpcoming.map((item) => (
-                            <motion.button
-                                key={item.id}
-                                whileHover={{ x: 4 }}
-                                onClick={() => handleAssignmentSwitch(item)}
-                                className={`w-full text-left p-4 rounded-2xl border transition-all ${selectedAssignment.id === item.id
-                                        ? 'bg-white border-primary shadow-lg shadow-primary/5 ring-1 ring-primary/20'
-                                        : 'bg-white border-slate-100 hover:border-slate-200'
-                                    }`}
-                            >
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div
-                                        className="w-2 h-2 rounded-full"
-                                        style={{ backgroundColor: item.color }}
-                                    />
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        {item.courseCode}
-                                    </span>
-                                </div>
-                                <h4 className={`text-sm font-bold leading-tight ${selectedAssignment.id === item.id ? 'text-primary' : 'text-slate-700'
-                                    }`}>
-                                    {item.title}
-                                </h4>
-                                <div className="mt-3 flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                                        <Clock size={12} />
-                                        <span>{new Date(item.deadline).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
-                                    </div>
-                                    <ChevronRight size={14} className={selectedAssignment.id === item.id ? 'text-primary' : 'text-slate-300'} />
-                                </div>
-                            </motion.button>
-                        ))}
+                        {assignments
+                            .sort((a, b) => {
+                                const subA = a.status === 'submitted' ? 1 : 0;
+                                const subB = b.status === 'submitted' ? 1 : 0;
+                                if (subA !== subB) return subA - subB;
+                                return a.deadline.getTime() - b.deadline.getTime();
+                            })
+                            .map((item) => {
+                                const isSelected = selectedAssignment.id === item.id;
+                                const isDone = item.status === 'submitted';
+                                return (
+                                    <motion.button
+                                        key={item.id}
+                                        layout
+                                        whileHover={{ x: 4 }}
+                                        onClick={() => handleAssignmentSwitch(item)}
+                                        className={`w-full text-left p-4 rounded-2xl border transition-all ${isSelected
+                                            ? 'bg-white border-primary shadow-lg shadow-primary/5 ring-1 ring-primary/20'
+                                            : isDone ? 'bg-slate-50 border-slate-100 opacity-60' : 'bg-white border-slate-100 hover:border-slate-200'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div
+                                                className={`w-2 h-2 rounded-full ${isDone ? 'bg-green-500' : ''}`}
+                                                style={isDone ? {} : { backgroundColor: item.color }}
+                                            />
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                {item.courseCode} • {isDone ? 'Done' : 'Upcoming'}
+                                            </span>
+                                        </div>
+                                        <h4 className={`text-sm font-bold leading-tight ${isSelected ? 'text-primary' : isDone ? 'text-slate-400 line-through' : 'text-slate-700'
+                                            }`}>
+                                            {item.title}
+                                        </h4>
+                                        <div className="mt-3 flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                                                <Clock size={12} />
+                                                <span>{new Date(item.deadline).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                                            </div>
+                                            <ChevronRight size={14} className={isSelected ? 'text-primary' : 'text-slate-300'} />
+                                        </div>
+                                    </motion.button>
+                                );
+                            })}
                     </div>
                 </section>
 
@@ -333,9 +395,15 @@ export const AssignmentSubmissionView: React.FC = () => {
                                             <span className="text-[10px] font-bold text-slate-400 uppercase mt-2 block">Maximum file size: 25MB</span>
                                         </p>
                                     </div>
-                                    <label className="cursor-pointer bg-primary text-white px-8 py-4 rounded-2xl font-black hover:scale-105 transition-all shadow-xl shadow-primary/20 inline-block">
+                                    <label className="cursor-pointer bg-primary text-white px-8 py-4 rounded-2xl font-black hover:scale-105 transition-all shadow-xl shadow-primary/20 inline-block pointer-events-auto">
                                         Browse Files
-                                        <input type="file" className="hidden" accept=".pdf,.docx" onChange={(e) => e.target.files && validateAndSetFile(e.target.files[0])} />
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            className="hidden"
+                                            accept=".pdf,.docx"
+                                            onChange={(e) => e.target.files && validateAndSetFile(e.target.files[0])}
+                                        />
                                     </label>
                                 </div>
                             ) : (
@@ -353,10 +421,10 @@ export const AssignmentSubmissionView: React.FC = () => {
                                                         <FileText size={24} />
                                                     </div>
                                                     <div className="text-left flex-1 min-w-0">
-                                                        <p className="font-bold text-slate-900 truncate">{file?.name}</p>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase">{(file!.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                        <p className="font-bold text-slate-900 truncate">{selectedAssignment.uploadedFile?.name}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase">{((selectedAssignment.uploadedFile?.size || 0) / 1024 / 1024).toFixed(2)} MB</p>
                                                     </div>
-                                                    <button onClick={() => { setUploadStatus('idle'); setFile(null); }} className="p-2 hover:bg-white rounded-full text-slate-300 hover:text-red-500 transition-colors">
+                                                    <button onClick={handleDeleteFile} className="p-2 hover:bg-white rounded-full text-slate-300 hover:text-red-500 transition-colors pointer-events-auto">
                                                         <X size={18} />
                                                     </button>
                                                 </div>
@@ -391,14 +459,35 @@ export const AssignmentSubmissionView: React.FC = () => {
                                                 </div>
                                                 <div>
                                                     <h3 className="text-2xl font-black text-slate-900 mb-1">Upload Successful!</h3>
-                                                    <p className="text-slate-500 text-sm font-bold">{file?.name}</p>
+                                                    <p className="text-slate-500 text-sm font-bold">{selectedAssignment.uploadedFile?.name}</p>
                                                 </div>
-                                                <button
-                                                    onClick={() => { setUploadStatus('idle'); setFile(null); }}
-                                                    className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-widest"
-                                                >
-                                                    Upload another file
-                                                </button>
+                                                <div className="flex flex-col gap-3 items-center">
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                if (selectedAssignment.uploadedFile) {
+                                                                    const url = URL.createObjectURL(selectedAssignment.uploadedFile);
+                                                                    window.open(url, '_blank');
+                                                                }
+                                                            }}
+                                                            className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-700 hover:bg-slate-50 transition-all shadow-sm pointer-events-auto"
+                                                        >
+                                                            <Eye size={14} /> View Document
+                                                        </button>
+                                                        <button
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-blue-500 hover:bg-blue-50 hover:border-blue-100 transition-all shadow-sm pointer-events-auto"
+                                                        >
+                                                            <RefreshCcw size={14} /> Change PDF
+                                                        </button>
+                                                    </div>
+                                                    <button
+                                                        onClick={handleDeleteFile}
+                                                        className="flex items-center gap-2 text-xs font-black text-red-400 hover:text-red-500 transition-colors uppercase tracking-widest mt-2 pointer-events-auto"
+                                                    >
+                                                        <Trash2 size={12} /> Remove Submission
+                                                    </button>
+                                                </div>
                                             </motion.div>
                                         )}
                                     </AnimatePresence>

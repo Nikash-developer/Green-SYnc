@@ -3,7 +3,9 @@ import Submission from '../models/Submission.ts';
 
 export const getAssignments = async (req: any, res: any) => {
     try {
-        const assignments = await Assignment.find().lean();
+        const { department } = req.query;
+        const query = department ? { target_department: department } : {};
+        const assignments = await Assignment.find(query).sort({ createdAt: -1 }).lean();
         res.json(assignments);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -13,6 +15,12 @@ export const getAssignments = async (req: any, res: any) => {
 export const createAssignment = async (req: any, res: any) => {
     try {
         const assignment = await Assignment.create({ ...req.body, created_by: req.user._id });
+
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('new_assignment', assignment);
+        }
+
         res.status(201).json(assignment);
     } catch (err: any) {
         res.status(500).json({ error: err.message });

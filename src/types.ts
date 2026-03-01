@@ -11,6 +11,9 @@ export interface Assignment {
   id: number;
   title: string;
   description: string;
+  long_description?: string;
+  topic?: string;
+  tags?: string[];
   subject: string;
   deadline: string;
   max_marks: number;

@@ -2,6 +2,9 @@ import multer from 'multer';
 import Submission from '../models/Submission.ts';
 import User from '../models/User.ts';
 import { calculateImpact } from '../utils/ecoEngine.ts';
+import * as pdf from 'pdf-parse';
+import path from 'path';
+import fs from 'fs';
 
 const storage = multer.memoryStorage();
 export const upload = multer({ storage, limits: { fileSize: 25 * 1024 * 1024 } }); // 25MB
@@ -14,13 +17,30 @@ export const uploadFile = async (req: any, res: any) => {
 
         let pageCount = 1;
         if (file.mimetype === 'application/pdf') {
-            // Mock page count for Hackathon demo speed and avoiding strict dependencies
-            pageCount = Math.floor(Math.random() * 10) + 1;
+            try {
+                const pdfParser = (pdf as any).default || pdf;
+                const data = await pdfParser(file.buffer);
+                pageCount = data.numpages || 1;
+            } catch (err) {
+                console.error("PDF Parse error, falling back to 1 page:", err);
+                pageCount = 1;
+            }
         }
 
-        const file_url = `/uploads/demo_${Date.now()}_${file.originalname}`;
+        // Handle File saving (Local for demo, S3 ready)
+        const fileName = `submission_${Date.now()}_${file.originalname.replace(/\s+/g, '_')}`;
+        const uploadPath = path.join(process.cwd(), 'uploads', fileName);
+
+        // Ensure uploads directory exists
+        if (!fs.existsSync(path.join(process.cwd(), 'uploads'))) {
+            fs.mkdirSync(path.join(process.cwd(), 'uploads'));
+        }
+
+        fs.writeFileSync(uploadPath, file.buffer);
+        const file_url = `/uploads/${fileName}`;
+
         const eco_update = calculateImpact(pageCount);
-        const plagiarism_score = Math.floor(Math.random() * 16);
+        const plagiarism_score = Math.floor(Math.random() * 16); // Simulation logic
 
         const submission = await Submission.create({
             student_id: req.user._id,
@@ -28,8 +48,8 @@ export const uploadFile = async (req: any, res: any) => {
             file_url,
             page_count: pageCount,
             plagiarism_score,
-            calculated_eco_impact: eco_update,
-            status: "submitted"
+            eco_impact: eco_update,
+            status: "Submitted"
         });
 
         await User.findByIdAndUpdate(req.user._id, {

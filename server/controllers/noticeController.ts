@@ -2,11 +2,11 @@ import Notice from '../models/Notice.ts';
 
 export const getNotices = async (req: any, res: any) => {
     try {
-        const notices = await Notice.find().populate('author_id', 'name').sort({ createdAt: -1 }).lean();
+        const notices = await Notice.find().populate('created_by', 'name').sort({ createdAt: -1 }).lean();
         const mapped = notices.map(n => ({
             ...n,
-            author_name: (n.author_id as any)?.name || 'Admin',
-            // id mapping for frontend
+            author_name: (n.created_by as any)?.name || 'Admin',
+            engagement_rate: Math.min(100, (n.read_receipts?.length || 0) * 10),
             id: n._id
         }));
         res.json(mapped);
@@ -17,7 +17,7 @@ export const getNotices = async (req: any, res: any) => {
 
 export const createNotice = async (req: any, res: any) => {
     try {
-        const notice = await Notice.create({ ...req.body, author_id: req.user._id });
+        const notice = await Notice.create({ ...req.body, created_by: req.user._id });
 
         const io = req.app.get('io');
         if (io) {
@@ -41,11 +41,11 @@ export const markRead = async (req: any, res: any) => {
         );
 
         if (notice) {
-            notice.engagement_rate = Math.min(100, notice.read_receipts.length * 5);
-            await notice.save();
-
             const io = req.app.get('io');
-            if (io) io.emit('notice_engagement_update', notice);
+            if (io) io.emit('notice_engagement_update', {
+                noticeId: notice._id,
+                engagement: Math.min(100, notice.read_receipts.length * 10)
+            });
         }
 
         res.json(notice);

@@ -6,11 +6,11 @@ const router = express.Router();
 
 router.route('/')
     .get(protectRoute, getAssignments)
-    .post(protectRoute, authorizeRole('faculty', 'admin'), createAssignment);
+    .post(protectRoute, authorizeRole('Faculty', 'Admin'), createAssignment);
 
 router.route('/:id')
-    .put(protectRoute, authorizeRole('faculty', 'admin'), updateAssignment);
+    .put(protectRoute, authorizeRole('Faculty', 'Admin'), updateAssignment);
 
-router.get('/:id/submissions', protectRoute, authorizeRole('faculty', 'admin'), getSubmissions);
+router.get('/:id/submissions', protectRoute, authorizeRole('Faculty', 'Admin'), getSubmissions);
 
 export default router;

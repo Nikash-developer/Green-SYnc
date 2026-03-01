@@ -20,7 +20,11 @@ export default function FacultyDashboard() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showNewAssignmentModal, setShowNewAssignmentModal] = useState(false);
+  const [newAssignmentCourse, setNewAssignmentCourse] = useState("Env Science 101");
+  const [assignmentFiles, setAssignmentFiles] = useState<File[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Environmental Stats State
   const [stats, setStats] = useState({
@@ -95,20 +99,22 @@ export default function FacultyDashboard() {
   };
 
   const handleSubmitGrade = () => {
-    if (activeStudent.status === 'Graded') return;
+    const isAlreadyGraded = activeStudent.status === 'Graded';
 
     setStudents(prev => prev.map(s =>
       s.id === activeStudentId ? { ...s, status: 'Graded', grade: `${totalScore} / 100`, rubric, feedback } : s
     ));
 
-    setStats(prev => ({
-      ...prev,
-      pending: Math.max(0, prev.pending - 1),
-      pages: prev.pages + 5,
-      water: prev.water + 50
-    }));
+    if (!isAlreadyGraded) {
+      setStats(prev => ({
+        ...prev,
+        pending: Math.max(0, prev.pending - 1),
+        pages: prev.pages + 5,
+        water: prev.water + 50
+      }));
+    }
 
-    handleShowToast(`Grade for ${activeStudent.name} submitted successfully!`);
+    handleShowToast(isAlreadyGraded ? `Grade for ${activeStudent.name} updated successfully!` : `Grade for ${activeStudent.name} submitted successfully!`);
   };
 
   const handleExport = () => {
@@ -383,7 +389,15 @@ export default function FacultyDashboard() {
                               <p className="text-[10px] text-slate-400 font-bold">Attached Analysis Target</p>
                             </div>
                           </div>
-                          <button className="text-xs font-black text-slate-400 hover:text-[#22C55E] transition-colors uppercase tracking-widest">View Data</button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open('https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', '_blank');
+                            }}
+                            className="text-xs font-black text-slate-400 hover:text-[#22C55E] transition-colors uppercase tracking-widest"
+                          >
+                            View Data
+                          </button>
                         </motion.div>
 
                         <p className="hover:text-slate-900 transition-colors cursor-text">Community gardens and localized urban agriculture represent another tier of the green revolution. These initiatives don't just provide fresh produce to "food deserts", but also act as social focal points that strengthen community bonds and resilience.</p>
@@ -469,11 +483,10 @@ export default function FacultyDashboard() {
                           Save Draft
                         </motion.button>
                         <motion.button
-                          whileHover={{ scale: activeStudent.status === 'Graded' && totalScore === parseInt(activeStudent.grade) ? 1 : 1.05 }}
-                          whileTap={{ scale: activeStudent.status === 'Graded' && totalScore === parseInt(activeStudent.grade) ? 1 : 0.95 }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           onClick={handleSubmitGrade}
-                          disabled={activeStudent.status === 'Graded' && totalScore === parseInt(activeStudent.grade)}
-                          className="flex-1 py-3.5 bg-[#22C55E] hover:bg-[#16a34a] disabled:bg-[#A7F3D0] disabled:cursor-not-allowed text-white text-sm font-black rounded-2xl transition-all shadow-lg shadow-[#22C55E]/30 group relative overflow-hidden min-w-[140px]"
+                          className="flex-1 py-3.5 bg-[#22C55E] hover:bg-[#16a34a] text-white text-sm font-black rounded-2xl transition-all shadow-lg shadow-[#22C55E]/30 group relative overflow-hidden min-w-[140px]"
                         >
                           <span className="relative z-10 block flex flex-row items-center justify-center gap-2">
                             {activeStudent.status === 'Graded' ? 'Update Grade' : 'Submit Grade'}
@@ -582,10 +595,24 @@ export default function FacultyDashboard() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Course</label>
-                      <select className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all appearance-none">
-                        <option>Env Science 101</option>
-                        <option>Geology 201</option>
-                      </select>
+                      <div className="space-y-3">
+                        <select
+                          value={newAssignmentCourse}
+                          onChange={(e) => setNewAssignmentCourse(e.target.value)}
+                          className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all appearance-none"
+                        >
+                          <option>Env Science 101</option>
+                          <option>Geology 201</option>
+                          <option value="Other">Other (Add Custom)</option>
+                        </select>
+                        {newAssignmentCourse === 'Other' && (
+                          <input
+                            type="text"
+                            placeholder="Type course name..."
+                            className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all"
+                          />
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Due Date</label>
@@ -593,8 +620,40 @@ export default function FacultyDashboard() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Description</label>
-                    <textarea placeholder="Describe the assignment details..." className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-medium text-slate-700 h-28 resize-none transition-all" />
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Description & Resources</label>
+                    <div className="relative group/desc">
+                      <textarea placeholder="Describe the assignment details..." className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-medium text-slate-700 h-28 resize-none transition-all pb-12" />
+                      <div className="absolute bottom-3 left-3 flex gap-2">
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="p-2 bg-slate-50 hover:bg-[#DCFCE7] text-slate-400 hover:text-[#22C55E] rounded-xl transition-all flex items-center gap-2 px-3 border border-slate-100"
+                        >
+                          <FileText size={14} />
+                          <span className="text-[10px] font-black uppercase tracking-wider">Add PDF</span>
+                        </button>
+                        <button
+                          onClick={() => imageInputRef.current?.click()}
+                          className="p-2 bg-slate-50 hover:bg-[#DCFCE7] text-slate-400 hover:text-[#22C55E] rounded-xl transition-all flex items-center gap-2 px-3 border border-slate-100"
+                        >
+                          <Edit3 size={14} />
+                          <span className="text-[10px] font-black uppercase tracking-wider">Add Image</span>
+                        </button>
+                        <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={(e) => e.target.files && setAssignmentFiles(prev => [...prev, e.target.files![0]])} />
+                        <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={(e) => e.target.files && setAssignmentFiles(prev => [...prev, e.target.files![0]])} />
+                      </div>
+                    </div>
+                    {assignmentFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        {assignmentFiles.map((file, idx) => (
+                          <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-[#DCFCE7] text-[#166534] rounded-lg text-xs font-bold border border-[#22C55E]/20">
+                            <span className="truncate max-w-[150px]">{file.name}</span>
+                            <button onClick={() => setAssignmentFiles(prev => prev.filter((_, i) => i !== idx))} className="hover:text-red-500 transition-colors">
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">

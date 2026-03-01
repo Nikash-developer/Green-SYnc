@@ -3,11 +3,10 @@ import mongoose from 'mongoose';
 const noticeSchema = new mongoose.Schema({
     title: { type: String, required: true },
     body: { type: String, required: true },
-    urgency_level: { type: String, enum: ['Normal', 'Emergency'], default: 'Normal' },
+    urgency_level: { type: String, enum: ['Low', 'Medium', 'Emergency'], default: 'Low' },
     target_audience: { type: String },
-    author_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    created_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     read_receipts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    engagement_rate: { type: Number, default: 0 }
 }, { timestamps: true });
 
 export default mongoose.model('Notice', noticeSchema);
