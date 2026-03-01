@@ -1,7 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import QuestionPaper from '../models/QuestionPaper.ts';
+import QuestionPaper from '../models/QuestionPaper';
 
 // Configure multer for local storage
 const storage = multer.diskStorage({

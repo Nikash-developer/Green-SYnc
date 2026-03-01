@@ -41,7 +41,14 @@ export default function LoginPage() {
           body: JSON.stringify({ email, password })
         });
 
-        const data = await res.json();
+        const contentType = res.headers.get('content-type');
+        let data;
+        if (contentType && contentType.includes('application/json')) {
+          data = await res.json();
+        } else {
+          throw new Error('Server returned an invalid response. This often means the MONGO_URI is not set correctly in your environment variables.');
+        }
+
         if (res.ok) {
           localStorage.setItem('token', data.token);
           login(data.user);
@@ -91,6 +98,12 @@ export default function LoginPage() {
       desc: 'Grade assignments, manage subjects, and post smart notices.',
       icon: <User className="w-6 h-6" />,
       idLabel: 'Employee ID'
+    },
+    admin: {
+      title: 'Administrator',
+      desc: 'System-wide management, user reviews, and global settings.',
+      icon: <ShieldCheck className="w-6 h-6" />,
+      idLabel: 'Admin ID'
     }
   };
 

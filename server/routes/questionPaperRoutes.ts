@@ -1,5 +1,5 @@
 import express from 'express';
-import { upload, uploadPaper, getPapers } from '../controllers/questionPaperController.ts';
+import { upload, uploadPaper, getPapers } from '../controllers/questionPaperController';
 
 const router = express.Router();
 

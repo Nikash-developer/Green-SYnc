@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
-import User from './models/User.ts';
-import Assignment from './models/Assignment.ts';
-import Submission from './models/Submission.ts';
-import Notice from './models/Notice.ts';
-import QuestionPaper from './models/QuestionPaper.ts';
+import User from './models/User';
+import Assignment from './models/Assignment';
+import Submission from './models/Submission';
+import Notice from './models/Notice';
+import QuestionPaper from './models/QuestionPaper';
 import fs from 'fs';
 import path from 'path';
 

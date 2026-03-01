@@ -8,17 +8,17 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 
 // MongoDB setup
-import { connectDB } from './server/config/db.ts';
-import { seedDB } from './server/seed.ts';
+import { connectDB } from './server/config/db';
+import { seedDB } from './server/seed';
 
 // Route imports
-import authRoutes from './server/routes/authRoutes.ts';
-import assignmentRoutes from './server/routes/assignmentRoutes.ts';
-import submissionRoutes from './server/routes/submissionRoutes.ts';
-import uploadRoutes from './server/routes/uploadRoutes.ts';
-import noticeRoutes from './server/routes/noticeRoutes.ts';
-import chatbotRoutes from './server/routes/chatbotRoutes.ts';
-import questionPaperRoutes from './server/routes/questionPaperRoutes.ts';
+import authRoutes from './server/routes/authRoutes';
+import assignmentRoutes from './server/routes/assignmentRoutes';
+import submissionRoutes from './server/routes/submissionRoutes';
+import uploadRoutes from './server/routes/uploadRoutes';
+import noticeRoutes from './server/routes/noticeRoutes';
+import chatbotRoutes from './server/routes/chatbotRoutes';
+import questionPaperRoutes from './server/routes/questionPaperRoutes';
 
 dotenv.config();
 
@@ -29,54 +29,53 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 async function setupApp() {
-  await connectDB();
-  // Seed DB if not in production or for the first time
-  if (process.env.NODE_ENV !== "production") {
-    await seedDB();
-  }
-
-  const server = http.createServer(app);
-  const io = new Server(server, { cors: { origin: '*' } });
-
-  app.set('io', io);
+  // --- API ROUTES ---
+  app.use('/api/auth', async (req, res, next) => { await connectDB(); next(); }, authRoutes);
+  app.use('/api/assignments', async (req, res, next) => { await connectDB(); next(); }, assignmentRoutes);
+  app.use('/api/submissions', async (req, res, next) => { await connectDB(); next(); }, submissionRoutes);
+  app.use('/api/upload', async (req, res, next) => { await connectDB(); next(); }, uploadRoutes);
+  app.use('/api/notices', async (req, res, next) => { await connectDB(); next(); }, noticeRoutes);
+  app.use('/api/chatbot', async (req, res, next) => { await connectDB(); next(); }, chatbotRoutes);
+  app.use('/api', async (req, res, next) => { await connectDB(); next(); }, questionPaperRoutes);
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   app.use(cors());
   app.use(express.json());
 
-  io.on('connection', (socket) => {
-    console.log('A user connected via Socket.io');
-    socket.on('disconnect', () => {
-      console.log('User disconnected from SIO');
-    });
-  });
-
-  // --- API ROUTES ---
-  app.use('/api/auth', authRoutes);
-  app.use('/api/assignments', assignmentRoutes);
-  app.use('/api/submissions', submissionRoutes);
-  app.use('/api/upload', uploadRoutes);
-  app.use('/api/notices', noticeRoutes);
-  app.use('/api/chatbot', chatbotRoutes);
-  app.use('/api', questionPaperRoutes);
-  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-
   // --- VITE MIDDLEWARE ---
   if (process.env.NODE_ENV !== "production") {
+    // Local dev setup with Vite
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
+
+    // Seed locally only
+    await connectDB();
+    await seedDB();
   } else {
-    const distPath = path.resolve(__dirname, 'dist');
+    // Production serving
+    const distPath = path.resolve(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
+      // Check if the path is an API call that missed the routes
+      if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ error: 'API route not found' });
+      }
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
-  // This part is only for local dev (Vite-mode) or when explicitly running as a standalone server
   if (process.env.VERCEL !== "1") {
+    const server = http.createServer(app);
+    const io = new Server(server, { cors: { origin: '*' } });
+    app.set('io', io);
+
+    io.on('connection', (socket) => {
+      console.log('A user connected via Socket.io');
+    });
+
     server.listen(PORT as number, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
@@ -84,5 +83,4 @@ async function setupApp() {
 }
 
 setupApp();
-
 export default app;
