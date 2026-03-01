@@ -238,8 +238,8 @@ export default function LoginPage() {
                 {(view === 'login' || view === 'signup') && (
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Role</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(['student', 'faculty'] as const).map((r) => (
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['student', 'faculty', 'admin'] as const).map((r) => (
                         <button
                           key={r}
                           type="button"
@@ -251,7 +251,7 @@ export default function LoginPage() {
                         >
                           <div className={`p-1.5 rounded-lg transition-colors ${role === r ? 'bg-primary text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-slate-100'
                             }`}>
-                            {React.cloneElement(roleInfo[r].icon as React.ReactElement, { size: 16 })}
+                            {React.cloneElement(roleInfo[r as keyof typeof roleInfo]?.icon || <ShieldCheck size={16} />, { size: 16 })}
                           </div>
                           <span className="text-[9px] font-black uppercase tracking-wider">{r}</span>
                         </button>

@@ -25,12 +25,15 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function startServer() {
-  await connectDB();
-  await seedDB();
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-  const app = express();
-  const PORT = process.env.PORT || 3000;
+async function setupApp() {
+  await connectDB();
+  // Seed DB if not in production or for the first time
+  if (process.env.NODE_ENV !== "production") {
+    await seedDB();
+  }
 
   const server = http.createServer(app);
   const io = new Server(server, { cors: { origin: '*' } });
@@ -65,15 +68,21 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.join(__dirname, "dist")));
+    const distPath = path.resolve(__dirname, 'dist');
+    app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(__dirname, "dist", "index.html"));
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
-  server.listen(PORT as number, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  // This part is only for local dev (Vite-mode) or when explicitly running as a standalone server
+  if (process.env.VERCEL !== "1") {
+    server.listen(PORT as number, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
-startServer();
+setupApp();
+
+export default app;
