@@ -12,6 +12,8 @@ import {
   Sun, Moon
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
+import confetti from 'canvas-confetti';
+import CountUp from 'react-countup';
 import { useAuth } from '../AuthContext';
 import { calculateImpact } from '../lib/utils';
 import { Notice, Assignment } from '../types';
@@ -45,7 +47,7 @@ interface AssignmentWithFile extends Assignment {
 }
 
 // Sub-components
-const StatCard: React.FC<{ icon: React.ReactNode, label: string, value: string, trend: string, color: string }> = ({ icon, label, value, trend, color }) => (
+const StatCard: React.FC<{ icon: React.ReactNode, label: string, value: string | number, trend: string, color: string, isNumeric?: boolean }> = ({ icon, label, value, trend, color, isNumeric }) => (
   <motion.div
     whileHover={{ y: -5 }}
     className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between group transition-all hover:shadow-xl hover:shadow-slate-200/50"
@@ -58,43 +60,51 @@ const StatCard: React.FC<{ icon: React.ReactNode, label: string, value: string, 
     </div>
     <div>
       <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">{label}</p>
-      <h3 className="text-4xl font-black text-slate-900">{value}</h3>
+      <h3 className="text-4xl font-black text-slate-900">
+        {isNumeric && typeof value === 'number' ? <CountUp end={value} duration={2.5} separator="," /> : value}
+      </h3>
     </div>
   </motion.div>
 );
 
-const NoticeItem: React.FC<{ notice: Notice }> = ({ notice }) => (
-  <motion.div
-    whileHover={{ x: 5 }}
-    className={`p-6 rounded-2xl border transition-all cursor-pointer ${notice.is_emergency
-      ? 'bg-[#FFF5F5] border-[#FFE3E3]'
-      : 'bg-[#F8F9FA] border-slate-100 hover:border-primary/30'
-      }`}
-  >
-    <div className="flex gap-5">
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${notice.is_emergency ? 'bg-[#FFE3E3] text-[#E03131]' : 'bg-[#E7F5ED] text-[#2B8A3E]'
-        }`}>
-        {notice.is_emergency ? <AlertCircle size={24} /> : <Megaphone size={24} />}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between items-start mb-1">
-          <h4 className="font-bold text-slate-900 truncate">{notice.title}</h4>
-          <span className={`text-[10px] font-bold whitespace-nowrap ml-2 ${notice.is_emergency ? 'text-[#E03131]' : 'text-slate-400'}`}>
-            {notice.is_emergency ? '10 mins ago' : '1 hour ago'}
-          </span>
+const NoticeItem: React.FC<{ notice: Notice & { read?: boolean } }> = ({ notice }) => (
+  <div className="relative">
+    {!notice.read && !notice.is_emergency && (
+      <motion.div initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} className="absolute -left-px top-6 bottom-6 w-1.5 bg-[#2B8A3E] rounded-r-full z-10" />
+    )}
+    <motion.div
+      className={`p-6 rounded-2xl border transition-[transform,shadow,border-color,background-color] duration-500 cursor-pointer overflow-hidden relative ${notice.is_emergency
+        ? 'bg-red-50 border-red-100'
+        : !notice.read ? 'bg-[#E7F5ED] border-[#8CE09F]/50' : 'bg-[#F8F9FA] border-slate-100 hover:border-[#8CE09F]/50'
+        }`}
+    >
+      <div className={`flex gap-5 ${notice.is_emergency ? 'mt-4' : ''}`}>
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${notice.is_emergency ? 'bg-red-100 text-red-600' : 'bg-white text-[#2B8A3E] shadow-sm'
+          }`}>
+          {notice.is_emergency ? <AlertCircle size={24} /> : <Megaphone size={24} />}
         </div>
-        <p className="text-sm text-slate-500 leading-relaxed mb-3">{notice.content}</p>
-        {notice.id === 2 && (
-          <div className="bg-white p-3 rounded-xl border border-slate-100 flex items-center gap-3 group/file hover:border-primary/30 transition-all">
-            <div className="bg-orange-50 p-2 rounded-lg text-orange-500">
-              <FileDown size={16} />
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start mb-1">
+            <h4 className={`font-bold truncate ${!notice.read ? 'text-slate-900' : 'text-slate-700'}`}>{notice.title}</h4>
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] font-bold whitespace-nowrap ml-2 ${notice.is_emergency ? 'text-red-500' : 'text-slate-400'}`}>
+                {notice.is_emergency ? '10 mins ago' : '1 hour ago'}
+              </span>
             </div>
-            <span className="text-xs font-bold text-slate-600 group-hover/file:text-primary transition-colors">Recycling_Drive_Info_Packet.pdf</span>
           </div>
-        )}
+          <p className="text-sm text-slate-500 leading-relaxed mb-3">{notice.content}</p>
+          {notice.id === 2 && (
+            <div className="bg-white p-3 rounded-xl border border-slate-100 flex items-center gap-3 group/file transition-all hover:bg-slate-50">
+              <div className="bg-orange-50 p-2 rounded-lg text-orange-500">
+                <FileDown size={16} />
+              </div>
+              <span className="text-xs font-bold text-slate-600 group-hover/file:text-[#2B8A3E] transition-colors">Recycling_Drive_Info_Packet.pdf</span>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  </motion.div>
+    </motion.div>
+  </div>
 );
 
 const AssignmentItem: React.FC<{
@@ -115,7 +125,7 @@ const AssignmentItem: React.FC<{
     <motion.div
       whileHover={{ scale: 1.01 }}
       onClick={onDetails}
-      className={`flex items-center gap-5 p-6 rounded-2xl border transition-all group cursor-pointer ${isSubmitted ? 'bg-green-50/50 border-green-100' : 'bg-[#F8F9FA] border-slate-100 hover:border-primary/30'
+      className={`flex items-center gap-5 p-6 rounded-2xl border transition-[transform,shadow] duration-300 group cursor-pointer ${isSubmitted ? 'bg-green-50/50 border-green-100' : 'bg-[#F8F9FA] border-slate-100 hover:shadow-md hover:border-slate-200'
         }`}
     >
       <div className="relative w-14 h-14 shrink-0 flex items-center justify-center">
@@ -554,7 +564,7 @@ const SettingsOption: React.FC<{
 
 export default function StudentDashboard() {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>('assignment-submission');
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [notices, setNotices] = useState<Notice[]>([]);
   const [impact, setImpact] = useState({ total_pages: 1240 });
   const [showAllNotices, setShowAllNotices] = useState(false);
@@ -574,6 +584,7 @@ export default function StudentDashboard() {
   const [selectedPaperSemester, setSelectedPaperSemester] = useState<string>('All Semesters');
   const [selectedPaperYear, setSelectedPaperYear] = useState<string>('All Years');
   const [searchQuery, setSearchQuery] = useState('');
+  const [paperSearchQuery, setPaperSearchQuery] = useState('');
   const [courses, setCourses] = useState<Course[]>([]);
   const [assignments, setAssignments] = useState<AssignmentWithFile[]>([]);
   const [showQuickUpload, setShowQuickUpload] = useState(false);
@@ -599,6 +610,7 @@ export default function StudentDashboard() {
   const [themeMode, setThemeMode] = useState<'Light' | 'Dark' | 'Eco'>('Light');
   const [saveStatus, setSaveStatus] = useState<boolean>(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [submissionCount, setSubmissionCount] = useState<number>(0);
 
   useEffect(() => {
     // Reset settings sub-tab when leaving settings tab
@@ -606,6 +618,15 @@ export default function StudentDashboard() {
       setSettingsSubTab('main');
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (themeMode === 'Eco' || themeMode === 'Dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [themeMode]);
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (activeAssignmentId && timeLeft > 0) {
@@ -834,10 +855,24 @@ export default function StudentDashboard() {
       }
     ];
 
+    const fetchPapers = async () => {
+      try {
+        const res = await fetch('/api/question-papers');
+        if (res.ok) {
+          const data = await res.json();
+          setPapers(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch papers', err);
+      }
+    };
+
     setNotices(mockNotices);
     setAssignments(mockAssignments);
-    setPapers(mockPapers);
     setCourses(mockCourses);
+
+    // Fetch real papers from DB instead of mocks
+    fetchPapers();
   }, []);
 
   const handleAssignmentAction = (id: number, action: 'submit' | 'start') => {
@@ -858,9 +893,22 @@ export default function StudentDashboard() {
       }
       return a;
     }));
+
     if (action === 'submit') {
       const assignment = assignments.find(a => a.id === id);
       if (id === 1 && !assignment?.uploadedFile) return;
+
+      setSubmissionCount(prev => prev + 1);
+
+      // Eco Confetti
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#22C55E', '#16A34A', '#86EFAC', '#4ADE80'],
+        shapes: ['circle', 'square']
+      });
+
       alert(`Successfully submitted the assignment!`);
     } else {
       alert(`Successfully started the assignment!`);
@@ -882,31 +930,65 @@ export default function StudentDashboard() {
     semester: 'Semester 1',
     type: 'Regular' as 'Regular' | 'KT'
   });
+  const [uploadPaperFile, setUploadPaperFile] = useState<File | null>(null);
+  const [isUploadingPaper, setIsUploadingPaper] = useState(false);
 
-  const handlePaperUpload = (e: React.FormEvent<HTMLFormElement>) => {
+  const handlePaperUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const subject = formData.get('subject') as string;
+    const file = formData.get('file') as File;
 
-    if (subject && uploadPaperForm.year && uploadPaperForm.semester) {
-      const newPaper: QuestionPaper = {
-        id: papers.length + 1,
-        subject,
-        year: uploadPaperForm.year,
-        semester: uploadPaperForm.semester,
-        type: uploadPaperForm.type,
-        url: 'https://muquestionpapers.com/FE/Sem1/Applied_Mathematics_1_Dec_2023.pdf'
-      };
-      setPapers(prev => [newPaper, ...prev]);
-      alert(`Question paper for "${subject}" uploaded successfully!`);
-      setShowUploadPaper(false);
-      // Reset form
-      setUploadPaperForm({ year: '2024', semester: 'Semester 1', type: 'Regular' });
+    if (!subject || !file || !file.name) {
+      alert("Please provide the subject and a valid PDF file.");
+      return;
+    }
+
+    try {
+      setIsUploadingPaper(true);
+      formData.append('year', uploadPaperForm.year);
+      formData.append('semester', uploadPaperForm.semester);
+      formData.append('examType', uploadPaperForm.type);
+
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/upload-paper', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        },
+        body: formData
+      });
+
+      if (res.ok) {
+        const newPaper = await res.json();
+        setPapers(prev => [newPaper, ...prev]);
+
+        // Eco Confetti on Upload Success
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.7 },
+          colors: ['#22C55E', '#3B82F6', '#86EFAC'],
+        });
+
+        alert(`Question paper for "${subject}" uploaded successfully!`);
+        setShowUploadPaper(false);
+        setUploadPaperForm({ year: '2024', semester: 'Semester 1', type: 'Regular' });
+        setUploadPaperFile(null);
+      } else {
+        const err = await res.json();
+        alert(`Upload Failed: ${err.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error uploading file");
+    } finally {
+      setIsUploadingPaper(false);
     }
   };
 
   const handleViewPaper = (paper: QuestionPaper) => {
-    window.open(paper.url, '_blank');
+    window.open(paper.url, '_blank', 'noopener,noreferrer');
   };
 
   const containerVariants = {
@@ -926,11 +1008,11 @@ export default function StudentDashboard() {
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-50 bg-white border-b border-slate-100 px-8 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-12">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <div className="bg-primary p-1.5 rounded-lg">
-              <Leaf className="text-white w-6 h-6" />
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setActiveTab('dashboard')}>
+            <div className="bg-primary p-2.5 rounded-2xl shadow-lg transform group-hover:rotate-12 transition-transform">
+              <Leaf size={28} className="text-white" />
             </div>
-            <span className="text-xl font-black tracking-tight text-slate-800">Green-Sync</span>
+            <span className="text-2xl font-black tracking-tight text-slate-800 italic">Green-Sync</span>
           </div>
 
           <div className="relative w-80 hidden lg:block">
@@ -1015,6 +1097,7 @@ export default function StudentDashboard() {
               className="space-y-8"
             >
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
                 {/* Left Column */}
                 <div className="lg:col-span-8 space-y-8">
                   {/* Notice Feed */}
@@ -1242,38 +1325,45 @@ export default function StudentDashboard() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
-                  <div className="flex items-center justify-between mb-8">
+                <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
+                  <div className="flex items-center justify-between mb-8 z-10 relative">
                     <div>
                       <h3 className="text-lg font-bold text-slate-900">Monthly Contribution</h3>
                       <p className="text-xs text-slate-400 font-medium">Tracking paper reduction over 6 months</p>
                     </div>
-                    <select className="bg-slate-50 border-none text-xs font-bold rounded-xl px-4 py-2 focus:ring-0">
+                    <select className="bg-slate-50 border-none text-xs font-bold rounded-xl px-4 py-2 focus:ring-0 text-slate-600 outline-none">
                       <option>Last 6 Months</option>
                       <option>This Year</option>
                     </select>
                   </div>
-                  <div className="h-64 flex items-end justify-between px-4">
+                  <div className="h-64 flex items-end justify-between px-4 z-10 relative">
                     {[
                       { m: 'Jan', v: 45 }, { m: 'Feb', v: 62 }, { m: 'Mar', v: 85 },
                       { m: 'Apr', v: 48 }, { m: 'May', v: 92 }, { m: 'Jun', v: 75 }
                     ].map((d, i) => (
-                      <div key={i} className="flex flex-col items-center gap-3 flex-1 group">
+                      <div key={i} className="flex flex-col items-center gap-3 flex-1 group/bar">
                         <div className="w-full max-w-[40px] relative flex flex-col justify-end h-48">
                           <motion.div
                             initial={{ height: 0 }}
                             animate={{ height: `${d.v}%` }}
-                            transition={{ duration: 1, delay: i * 0.1 }}
-                            className={`w-full rounded-t-xl transition-colors ${i === 4 ? 'bg-primary shadow-lg shadow-primary/20' : 'bg-primary/20 group-hover:bg-primary/30'}`}
+                            transition={{ duration: 1, delay: i * 0.1, type: "spring" }}
+                            className={`w-full rounded-t-xl transition-colors ${i === 4 ? 'bg-[#2B8A3E] shadow-lg shadow-[#2B8A3E]/20' : 'bg-green-100 group-hover/bar:bg-[#2B8A3E]/70'}`}
                           />
-                          <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none mb-2">
-                            {d.v}%
+                          <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2 py-1.5 rounded-lg opacity-0 group-hover/bar:opacity-100 transition-all pointer-events-none mb-2 font-bold transform -translate-y-2 group-hover/bar:translate-y-0">
+                            {d.v} pgs
                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
                           </div>
                         </div>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{d.m}</span>
                       </div>
                     ))}
+                  </div>
+                  {/* Background grid lines for chart */}
+                  <div className="absolute inset-0 z-0 pointer-events-none flex flex-col justify-between pt-24 pb-12 px-8">
+                    <div className="border-b border-slate-50 w-full"></div>
+                    <div className="border-b border-slate-50 w-full"></div>
+                    <div className="border-b border-slate-50 w-full"></div>
+                    <div className="border-b border-slate-50 w-full"></div>
                   </div>
                 </div>
 
@@ -1287,16 +1377,75 @@ export default function StudentDashboard() {
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-primary to-primary-dark p-8 rounded-[2rem] shadow-xl shadow-primary/20 text-white">
-                    <div className="flex items-center gap-4 mb-4">
+                  <div className="bg-gradient-to-br from-[#2B8A3E] to-[#1e612c] p-8 rounded-[2rem] shadow-xl shadow-[#2B8A3E]/20 text-white relative overflow-hidden group">
+                    <div className="absolute -right-12 -top-12 w-40 h-40 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-700" />
+                    <div className="flex items-center gap-4 mb-4 relative z-10">
                       <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
                         <Zap size={24} />
                       </div>
-                      <h4 className="font-black">Green Tip</h4>
+                      <h4 className="font-black text-lg">Green Tip</h4>
                     </div>
-                    <p className="text-sm font-medium leading-relaxed text-white/90">
-                      Digitizing your next 5 assignments will save enough water for a shower! Keep up the good work.
+                    <p className="text-sm font-medium leading-relaxed text-white/90 relative z-10">
+                      Digitizing your next 5 assignments will save enough water for a 10-minute shower! Keep up the excellent work.
                     </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Added deeper analytics graphs area */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col relative">
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">Weekly Carbon Output</h3>
+                  <p className="text-xs text-slate-400 font-medium mb-8">Calculated against traditional paper usage</p>
+
+                  <div className="flex-1 flex items-end gap-2 h-40 px-4 mt-auto">
+                    {[34, 45, 23, 56, 12, 60, 20].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-3 group">
+                        <motion.div
+                          className="w-full bg-[#E7F5ED] rounded-lg group-hover:bg-[#8CE09F] transition-colors relative"
+                          initial={{ height: 0 }}
+                          animate={{ height: `${h}%` }}
+                          transition={{ delay: 0.3 + (i * 0.05), duration: 0.8 }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-black tracking-widest text-slate-300 mt-4 uppercase px-4">
+                    <span>Mon</span>
+                    <span>Sun</span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+                  <h3 className="text-lg font-bold text-slate-900 mb-8">Assignment Category Analytics</h3>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs font-bold text-slate-700">
+                        <span>Lab Reports</span>
+                        <span className="text-[#2B8A3E]">42%</span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <motion.div initial={{ width: 0 }} animate={{ width: '42%' }} transition={{ duration: 1 }} className="h-full bg-[#2B8A3E] rounded-full" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs font-bold text-slate-700">
+                        <span>Research Papers</span>
+                        <span className="text-blue-500">35%</span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <motion.div initial={{ width: 0 }} animate={{ width: '35%' }} transition={{ duration: 1, delay: 0.1 }} className="h-full bg-blue-500 rounded-full" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs font-bold text-slate-700">
+                        <span>Quizzes & Short Answers</span>
+                        <span className="text-orange-500">23%</span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <motion.div initial={{ width: 0 }} animate={{ width: '23%' }} transition={{ duration: 1, delay: 0.2 }} className="h-full bg-orange-500 rounded-full" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1312,21 +1461,31 @@ export default function StudentDashboard() {
               transition={{ duration: 0.4, ease: "easeOut" }}
               className="space-y-8"
             >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
                   <h1 className="text-3xl font-black">Mumbai University Papers</h1>
                   <p className="text-slate-500 font-medium mt-1">Previous year question papers for Engineering</p>
                 </div>
                 <div className="flex flex-wrap gap-3 items-end">
+                  <div className="relative w-64">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      value={paperSearchQuery}
+                      onChange={(e) => setPaperSearchQuery(e.target.value)}
+                      placeholder="Search paper subjects..."
+                      className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm font-bold shadow-sm"
+                    />
+                  </div>
                   <CustomDropdown
                     label="Semester"
-                    options={['All Semesters', 'Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8']}
+                    options={['All Semesters', ...Array.from(new Set(papers.map(p => p.semester))).sort()]}
                     value={selectedPaperSemester}
                     onChange={setSelectedPaperSemester}
                   />
                   <CustomDropdown
                     label="Year"
-                    options={['All Years', '2024', '2023', '2022', '2021', '2020']}
+                    options={['All Years', ...Array.from(new Set(papers.map(p => p.year))).sort((a, b) => Number(b) - Number(a))]}
                     value={selectedPaperYear}
                     onChange={setSelectedPaperYear}
                   />
@@ -1358,7 +1517,7 @@ export default function StudentDashboard() {
                       {papers
                         .filter(p => selectedPaperSemester === 'All Semesters' || p.semester === selectedPaperSemester)
                         .filter(p => selectedPaperYear === 'All Years' || p.year === selectedPaperYear)
-                        .filter(p => p.subject.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .filter(p => p.subject.toLowerCase().includes(searchQuery.toLowerCase()) && p.subject.toLowerCase().includes(paperSearchQuery.toLowerCase()))
                         .map((paper) => (
                           <motion.tr
                             key={paper.id}
@@ -1383,20 +1542,22 @@ export default function StudentDashboard() {
                               </span>
                             </td>
                             <td className="px-8 py-6 text-right">
-                              <button
-                                onClick={() => handleViewPaper(paper)}
-                                className="p-2 text-slate-400 hover:text-primary transition-colors"
+                              <a
+                                href={paper.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 text-slate-400 hover:text-primary transition-colors inline-block"
                                 title="View/Download Paper"
                               >
                                 <FileDown size={20} />
-                              </button>
+                              </a>
                             </td>
                           </motion.tr>
                         ))}
                     </tbody>
                   </table>
                 </div>
-                {papers.filter(p => (selectedPaperSemester === 'All Semesters' || p.semester === selectedPaperSemester) && (selectedPaperYear === 'All Years' || p.year === selectedPaperYear) && p.subject.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                {papers.filter(p => (selectedPaperSemester === 'All Semesters' || p.semester === selectedPaperSemester) && (selectedPaperYear === 'All Years' || p.year === selectedPaperYear) && p.subject.toLowerCase().includes(searchQuery.toLowerCase()) && p.subject.toLowerCase().includes(paperSearchQuery.toLowerCase())).length === 0 && (
                   <div className="p-20 text-center">
                     <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
                       <FileQuestion size={40} />
@@ -2042,11 +2203,18 @@ export default function StudentDashboard() {
                     />
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-black text-slate-400 uppercase ml-2">File (PDF)</label>
-                      <div className="relative">
-                        <input type="file" accept=".pdf" required className="absolute inset-0 opacity-0 cursor-pointer" />
-                        <div className="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-2 text-slate-400 font-bold text-sm h-[42px]">
-                          <Upload size={16} />
-                          <span>Select PDF</span>
+                      <div className="relative border border-transparent rounded-2xl overflow-hidden group/upload transition-all hover:border-primary/20">
+                        <input
+                          name="file"
+                          type="file"
+                          accept=".pdf"
+                          required
+                          onChange={(e) => setUploadPaperFile(e.target.files?.[0] || null)}
+                          className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                        />
+                        <div className={`w-full p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 font-bold text-sm h-[42px] transition-colors ${uploadPaperFile ? 'bg-primary/5 border-primary/20 text-primary' : 'bg-slate-50 border-slate-200 text-slate-400 group-hover/upload:bg-white group-hover/upload:border-primary/30'}`}>
+                          <Upload size={16} className={uploadPaperFile ? 'text-primary' : ''} />
+                          <span className="truncate max-w-[120px]">{uploadPaperFile ? uploadPaperFile.name : 'Select PDF'}</span>
                         </div>
                       </div>
                     </div>
@@ -2057,8 +2225,17 @@ export default function StudentDashboard() {
                     <p className="text-xs text-slate-600 leading-relaxed">Your contribution helps other students. Please ensure the paper is clear and complete.</p>
                   </div>
 
-                  <button type="submit" className="w-full py-4 bg-primary text-white rounded-2xl font-black hover:bg-primary-dark transition-all shadow-xl shadow-primary/20">
-                    Upload & Share
+                  <button
+                    disabled={isUploadingPaper}
+                    type="submit"
+                    className="w-full py-4 bg-primary text-white rounded-2xl font-black hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                  >
+                    {isUploadingPaper ? (
+                      <>
+                        <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
+                        Uploading to Grid...
+                      </>
+                    ) : 'Upload & Share'}
                   </button>
                 </form>
               </motion.div>

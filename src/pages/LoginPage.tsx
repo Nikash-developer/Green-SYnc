@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+const loginBgImg = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80&auto=format&fit=crop';
 
 type ViewState = 'login' | 'forgot-password' | 'signup';
 
@@ -33,7 +34,7 @@ export default function LoginPage() {
 
     if (view === 'login') {
       try {
-        const res = await fetch('/api/login', {
+        const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
@@ -41,6 +42,7 @@ export default function LoginPage() {
 
         const data = await res.json();
         if (res.ok) {
+          localStorage.setItem('token', data.token);
           login(data.user);
           if (data.user.role === 'student') navigate('/student');
           else if (data.user.role === 'admin') navigate('/admin');
@@ -112,11 +114,11 @@ export default function LoginPage() {
       >
         {/* Left: Form Area */}
         <div className="w-full md:w-1/2 p-8 lg:p-12 flex flex-col overflow-y-auto max-h-[90vh] md:max-h-none">
-          <div className="mb-8 flex items-center gap-2">
-            <div className="p-1.5 bg-primary/10 rounded-lg text-primary">
-              <Leaf size={24} fill="currentColor" />
+          <div className="mb-10 flex items-center gap-3 group">
+            <div className="p-2 bg-primary/10 rounded-xl text-primary transform group-hover:rotate-12 transition-transform">
+              <Leaf size={32} fill="currentColor" />
             </div>
-            <span className="text-xl font-black tracking-tight text-slate-900">Green-Sync</span>
+            <span className="text-2xl font-black tracking-tight text-slate-900 italic">Green-Sync</span>
           </div>
 
           <AnimatePresence mode="wait">
@@ -360,10 +362,10 @@ export default function LoginPage() {
         <div className="hidden md:block w-1/2 bg-[#111827] relative overflow-hidden">
           <motion.img
             initial={{ scale: 1.1, opacity: 0 }}
-            animate={{ scale: 1, opacity: 0.6 }}
+            animate={{ scale: 1, opacity: 0.4 }}
             transition={{ duration: 1.5 }}
-            src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=1200"
-            alt="Green forest"
+            src={loginBgImg}
+            alt="Futuristic premium greenhouse layout"
             className="absolute inset-0 w-full h-full object-cover"
             referrerPolicy="no-referrer"
           />

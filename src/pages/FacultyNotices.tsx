@@ -5,6 +5,7 @@ import {
     Link as LinkIcon, Image as ImageIcon, Calendar, Eye,
     MousePointerClick, TreePine, ChevronRight, History, Send, X, Filter, Clock
 } from 'lucide-react';
+import CountUp from 'react-countup';
 
 type Priority = 'Normal' | 'Emergency';
 type Status = 'Published' | 'Scheduled' | 'Draft';
@@ -33,13 +34,53 @@ export default function FacultyNotices() {
     const [scheduleDate, setScheduleDate] = useState("");
     const [isEmergency, setIsEmergency] = useState(false);
     const [isAutoSaving, setIsAutoSaving] = useState(false);
+    const [selectedNoticeForDetail, setSelectedNoticeForDetail] = useState<Notice | null>(null);
     const editorRef = useRef<HTMLDivElement>(null);
+    const imageInputRef = useRef<HTMLInputElement>(null);
 
     const handleFormat = (command: string, value?: string) => {
         document.execCommand(command, false, value);
         // Refresh content state after formatting
         if (editorRef.current) {
             setContent(editorRef.current.innerHTML);
+
+            // Add click listeners to images for simple resizing logic
+            const imgs = editorRef.current.getElementsByTagName('img');
+            for (let i = 0; i < imgs.length; i++) {
+                const img = imgs[i];
+                if (!img.getAttribute('data-listener')) {
+                    img.setAttribute('data-listener', 'true');
+                    img.style.cursor = 'nwse-resize';
+                    img.style.maxWidth = '100%';
+                    img.style.borderRadius = '1rem';
+                    img.style.transition = 'all 0.3s ease';
+                    img.onclick = (e) => {
+                        e.stopPropagation();
+                        const currentWidth = img.clientWidth;
+                        const newWidth = prompt("Enter new width in pixels (or %):", currentWidth.toString());
+                        if (newWidth) img.style.width = newWidth.includes('%') ? newWidth : `${newWidth}px`;
+
+                        const currentRotation = img.style.transform || "rotate(0deg)";
+                        const deg = prompt("Rotate image (enter degrees, e.g., 90, 180, -90):", "0");
+                        if (deg) img.style.transform = `rotate(${deg}deg)`;
+                    };
+                }
+            }
+        }
+    };
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const imageUrl = event.target?.result as string;
+                handleFormat('insertImage', imageUrl);
+                // After inserting, we might want to resize or style the image, 
+                // but for now, simple insertion is a good step.
+                handleShowToast("Image uploaded and inserted!");
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -258,7 +299,8 @@ export default function FacultyNotices() {
                                                 { icon: Bold, cmd: 'bold', label: 'Bold' },
                                                 { icon: Italic, cmd: 'italic', label: 'Italic' },
                                                 { icon: Underline, cmd: 'underline', label: 'Underline' },
-                                                { icon: List, cmd: 'insertUnorderedList', label: 'List' }
+                                                { icon: List, cmd: 'insertUnorderedList', label: 'List' },
+                                                { icon: FileText, cmd: 'strikethrough', label: 'Strikethrough' }
                                             ].map((tool, i) => (
                                                 <motion.button
                                                     key={i}
@@ -281,15 +323,24 @@ export default function FacultyNotices() {
                                                 <LinkIcon size={18} />
                                             </motion.button>
                                         </div>
-                                        <motion.button
-                                            whileHover={{ scale: 1.1, backgroundColor: '#DCFCE7' }}
-                                            whileTap={{ scale: 0.9 }}
-                                            onClick={(e) => { e.preventDefault(); handleShowToast('Image upload feature coming soon!'); }}
-                                            className="p-2 text-slate-400 hover:text-[#22C55E] rounded-xl transition-all"
-                                            title="Add Image"
-                                        >
-                                            <ImageIcon size={18} />
-                                        </motion.button>
+                                        <div>
+                                            <input
+                                                type="file"
+                                                ref={imageInputRef}
+                                                onChange={handleImageUpload}
+                                                accept="image/*"
+                                                className="hidden"
+                                            />
+                                            <motion.button
+                                                whileHover={{ scale: 1.1, backgroundColor: '#DCFCE7' }}
+                                                whileTap={{ scale: 0.9 }}
+                                                onClick={(e) => { e.preventDefault(); imageInputRef.current?.click(); }}
+                                                className="p-2 text-slate-400 hover:text-[#22C55E] rounded-xl transition-all"
+                                                title="Add Image"
+                                            >
+                                                <ImageIcon size={18} />
+                                            </motion.button>
+                                        </div>
                                     </div>
                                     <div
                                         ref={editorRef}
@@ -306,15 +357,30 @@ export default function FacultyNotices() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                                 <div>
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-2.5 ml-1">Schedule Publishing</label>
-                                    <div className="relative group">
+                                    <motion.div
+                                        whileHover={{ y: -2 }}
+                                        className="relative group shadow-sm hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden"
+                                    >
                                         <input
                                             type="datetime-local"
                                             value={scheduleDate}
                                             onChange={(e) => setScheduleDate(e.target.value)}
-                                            className="w-full p-4 pl-12 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-700 bg-[#F8FAF9] transition-all"
+                                            className="w-full p-4.5 pl-12 border-2 border-slate-50 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#DCFCE7]/50 focus:border-[#22C55E] font-black text-slate-700 bg-white placeholder:text-slate-300 appearance-none cursor-pointer"
                                         />
-                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#22C55E] transition-colors" size={20} />
-                                    </div>
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center bg-[#DCFCE7] text-[#22C55E] rounded-lg group-focus-within:bg-[#22C55E] group-focus-within:text-white transition-all">
+                                            <Clock size={14} strokeWidth={3} />
+                                        </div>
+                                    </motion.div>
+                                    {scheduleDate && (
+                                        <motion.p
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            className="text-[11px] font-black text-[#22C55E] mt-3 ml-1 flex items-center gap-2 tracking-tight"
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
+                                            Live on: {new Date(scheduleDate).toLocaleString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                        </motion.p>
+                                    )}
                                 </div>
 
                                 <div>
@@ -389,7 +455,15 @@ export default function FacultyNotices() {
                         >
                             <div className="p-7 border-b border-slate-50 flex items-center justify-between shrink-0 bg-white sticky top-0 z-10">
                                 <h2 className="text-xl font-black text-slate-900">Recent Notices</h2>
-                                <button className="text-[10px] font-black text-[#22C55E] hover:text-[#16a34a] transition-all uppercase tracking-[0.2em]">View All</button>
+                                <button
+                                    onClick={() => {
+                                        setHistoryFilter('All');
+                                        setShowHistoryDrawer(true);
+                                    }}
+                                    className="text-[10px] font-black text-[#22C55E] hover:text-[#16a34a] transition-all uppercase tracking-[0.2em] px-3 py-1.5 bg-[#DCFCE7]/30 rounded-lg hover:bg-[#DCFCE7]/50"
+                                >
+                                    View All
+                                </button>
                             </div>
 
                             <div className="overflow-y-auto px-4 py-2 pb-6 styled-scrollbar space-y-1">
@@ -401,7 +475,7 @@ export default function FacultyNotices() {
                                             animate={{ opacity: 1, x: 0 }}
                                             key={notice.id}
                                             className={`flex items-center gap-4 p-4 rounded-3xl group cursor-pointer transition-all hover:translate-x-1 ${notice.priority === 'Emergency' ? 'hover:bg-red-50/50' : 'hover:bg-[#F8FAF9]'}`}
-                                            onClick={() => handleShowToast(`Opening preview for: ${notice.title}`)}
+                                            onClick={() => setSelectedNoticeForDetail(notice)}
                                         >
                                             <div className="shrink-0 relative">
                                                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden transition-transform group-hover:scale-110 shadow-sm ${notice.priority === 'Emergency' ? 'bg-red-100 text-red-500' : 'bg-[#F8FAF9] border border-slate-100'}`}>
@@ -499,13 +573,99 @@ export default function FacultyNotices() {
                                                         <div key={i} className="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-black text-slate-400" title={d}>{d[0]}</div>
                                                     ))}
                                                 </div>
-                                                <button className="flex items-center gap-1.5 text-xs font-black text-[#22C55E] group/btn">
+                                                <button
+                                                    onClick={() => setSelectedNoticeForDetail(notice)}
+                                                    className="flex items-center gap-1.5 text-xs font-black text-[#22C55E] group/btn hover:scale-105 transition-all"
+                                                >
                                                     View Details <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
                                                 </button>
                                             </div>
                                         </motion.div>
                                     ))
                                 )}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Notice Detail Modal */}
+            <AnimatePresence>
+                {selectedNoticeForDetail && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedNoticeForDetail(null)}
+                            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70]"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl z-[80] overflow-hidden flex flex-col max-h-[90vh]"
+                        >
+                            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-white shrink-0">
+                                <div className="flex items-center gap-4">
+                                    <div className={`p-3 rounded-2xl ${selectedNoticeForDetail.priority === 'Emergency' ? 'bg-red-100 text-red-500' : 'bg-[#DCFCE7] text-[#22C55E]'}`}>
+                                        <FileText size={24} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">{selectedNoticeForDetail.title}</h2>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedNoticeForDetail.author}</span>
+                                            <span className="text-slate-300">•</span>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{selectedNoticeForDetail.date} at {selectedNoticeForDetail.time}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSelectedNoticeForDetail(null)} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-2xl transition-all"><X size={24} /></button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-10 styled-scrollbar space-y-8">
+                                {selectedNoticeForDetail.thumbnail && (
+                                    <div className="w-full h-64 rounded-[2rem] overflow-hidden border border-slate-100 shadow-sm relative group">
+                                        <img src={selectedNoticeForDetail.thumbnail} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Notice Thumbnail" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                                    </div>
+                                )}
+
+                                <div className="prose prose-slate max-w-none">
+                                    <div
+                                        className="text-slate-700 leading-relaxed font-semibold text-lg"
+                                        dangerouslySetInnerHTML={{ __html: selectedNoticeForDetail.content }}
+                                    />
+                                </div>
+
+                                <div className="pt-8 border-t border-slate-50">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block mb-4">Acknowledge By</label>
+                                    <div className="flex flex-wrap gap-2.5">
+                                        {selectedNoticeForDetail.departments.map(dept => (
+                                            <span key={dept} className="px-4 py-2 bg-slate-50 text-slate-500 border border-slate-100 rounded-xl text-xs font-black">
+                                                {dept}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setSelectedNoticeForDetail(null)}
+                                    className="px-8 py-4 bg-white border border-slate-200 text-slate-700 font-black rounded-2xl hover:bg-slate-100 transition-all active:scale-95 shadow-sm"
+                                >
+                                    Close Preview
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        handleShowToast("Notice forwarded to relevant portal!");
+                                        setSelectedNoticeForDetail(null);
+                                    }}
+                                    className="px-8 py-4 bg-[#22C55E] text-white font-black rounded-2xl hover:bg-[#16a34a] shadow-lg shadow-[#22C55E]/20 transition-all active:scale-95"
+                                >
+                                    Share Notice
+                                </button>
                             </div>
                         </motion.div>
                     </>
@@ -547,14 +707,9 @@ function MetricCard({ icon, label, value, trend, suffix = "", color }: any) {
                 <div>
                     <p className="text-[10px] font-black text-slate-400 mb-0.5 uppercase tracking-[0.15em]">{label}</p>
                     <div className="flex items-baseline gap-1.5">
-                        <motion.span
-                            initial={{ scale: 0.9 }}
-                            animate={{ scale: 1 }}
-                            key={value}
-                            className="text-2xl font-black text-slate-900 tracking-tight"
-                        >
-                            {value.toLocaleString()}{suffix}
-                        </motion.span>
+                        <span className="text-2xl font-black text-slate-900 tracking-tight">
+                            <CountUp end={value} duration={2} separator="," />{suffix}
+                        </span>
                     </div>
                 </div>
             </div>

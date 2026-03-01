@@ -6,8 +6,9 @@ import {
   Zap, Plus, Download, ChevronRight, Users,
   CheckCircle2, Clock, AlertCircle, ArrowLeft, ArrowRight,
   Edit3, MessageSquare, Scissors, Type, Maximize2,
-  MoreVertical, Filter, SortDesc, Folder, ClipboardList, Droplets, User, X
+  MoreVertical, Filter, SortDesc, Folder, ClipboardList, Droplets, User, X, Sparkles
 } from 'lucide-react';
+import CountUp from 'react-countup';
 import { useAuth } from '../AuthContext';
 import FacultyNotices from './FacultyNotices';
 
@@ -15,7 +16,7 @@ export default function FacultyDashboard() {
   const { user, logout } = useAuth();
 
   // Navigation State
-  const [activeNav, setActiveNav] = useState("Notices");
+  const [activeNav, setActiveNav] = useState("Assignments");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showNewAssignmentModal, setShowNewAssignmentModal] = useState(false);
@@ -51,6 +52,8 @@ export default function FacultyDashboard() {
   const [zoom, setZoom] = useState(100);
   const [isHighlighting, setIsHighlighting] = useState(false);
   const [hasHighlight, setHasHighlight] = useState(true);
+  const [isAILoading, setIsAILoading] = useState(false);
+  const [showAIBadge, setShowAIBadge] = useState(false);
   const feedbackEditorRef = useRef<HTMLDivElement>(null);
 
   const handleFormat = (command: string) => {
@@ -60,11 +63,24 @@ export default function FacultyDashboard() {
     }
   };
 
+  const handleAIMock = () => {
+    if (activeStudent.status === 'Graded') return;
+    setIsAILoading(true);
+    setShowAIBadge(false);
+    setTimeout(() => {
+      setFeedback(`<strong>Excellent work on integrating the sustainability concepts.</strong> Your analysis of urban density could be expanded slightly in the next assignment. The connection to public sentiment is very strong.`);
+      setIsAILoading(false);
+      setShowAIBadge(true);
+      handleShowToast("AI Suggested Feedback applied");
+    }, 1500);
+  };
+
   // Sync grading state when active student changes
   useEffect(() => {
     setRubric(activeStudent.rubric);
     setFeedback(activeStudent.feedback);
     setHasHighlight(activeStudent.status !== 'Pending');
+    setShowAIBadge(false);
   }, [activeStudentId]);
 
   // Actions
@@ -108,9 +124,11 @@ export default function FacultyDashboard() {
       {/* Top Navbar */}
       <header className="bg-white border-b border-[#E5E7EB] flex items-center justify-between px-8 py-4 sticky top-0 z-40">
         <div className="flex items-center gap-12 flex-1 max-w-4xl">
-          <div className="flex items-center gap-2 shrink-0">
-            <Leaf className="text-[#22C55E] w-6 h-6" />
-            <span className="text-xl font-black text-slate-900">Green-Sync</span>
+          <div className="flex items-center gap-3 shrink-0 group cursor-pointer" onClick={() => setActiveNav('Notices')}>
+            <div className="p-2 bg-[#E8F5E9] rounded-2xl text-[#22C55E] shadow-sm transform group-hover:rotate-12 transition-transform">
+              <Leaf size={28} fill="currentColor" />
+            </div>
+            <span className="text-2xl font-black tracking-tight text-slate-900 italic">Green-Sync</span>
           </div>
           <div className="relative flex-1 max-w-md hidden md:block">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -253,33 +271,40 @@ export default function FacultyDashboard() {
                     </div>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto styled-scrollbar">
+                  <div className="flex-1 overflow-y-auto styled-scrollbar p-3 space-y-3">
                     {students.map((student) => (
-                      <button
+                      <motion.button
                         key={student.id}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setActiveStudentId(student.id)}
-                        className={`w-full p-5 flex items-start gap-4 transition-all border-b border-slate-50 last:border-none relative group ${activeStudentId === student.id ? 'bg-[#F0FDF4]' : 'hover:bg-slate-50'}`}
+                        className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all duration-300 relative overflow-hidden group ${activeStudentId === student.id
+                          ? 'bg-gradient-to-br from-[#F0FDF4] to-white border border-[#22C55E]/30 shadow-md transform'
+                          : 'bg-white border border-slate-100 hover:border-[#22C55E]/30 hover:shadow-lg'
+                          }`}
                       >
                         {activeStudentId === student.id && (
-                          <motion.div layoutId="activeStudentHighlight" className="absolute left-0 top-2 bottom-2 w-1.5 bg-[#22C55E] rounded-r-full" />
+                          <motion.div layoutId="activeStudentHighlight" className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#22C55E]" />
                         )}
-                        <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm shrink-0">
-                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${student.name}`} alt="Avatar" />
+                        <div className={`w-12 h-12 rounded-full overflow-hidden border-2 shadow-sm shrink-0 transition-colors duration-300 ${activeStudentId === student.id ? 'border-[#22C55E]' : 'border-white group-hover:border-[#22C55E]/50'}`}>
+                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${student.name}`} alt="Avatar" className="w-full h-full object-cover" />
                         </div>
                         <div className="flex-1 text-left min-w-0">
-                          <div className="flex justify-between items-start mb-0.5">
-                            <p className={`text-sm font-bold truncate ${activeStudentId === student.id ? 'text-[#166534]' : 'text-slate-900'}`}>{student.name}</p>
-                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${student.status === 'Graded' ? 'bg-green-100 text-green-700' : student.status === 'Late' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+                          <div className="flex justify-between items-center mb-1">
+                            <p className={`text-[13px] font-black truncate transition-colors duration-300 ${activeStudentId === student.id ? 'text-[#166534]' : 'text-slate-900 group-hover:text-[#22C55E]'}`}>{student.name}</p>
+                            <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${student.status === 'Graded' ? 'bg-[#DCFCE7] text-[#166534]' : student.status === 'Late' ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-500'}`}>
                               {student.status}
                             </span>
                           </div>
-                          <p className="text-[10px] text-slate-400 font-medium mb-2">{student.date}</p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-slate-600">{student.grade}</span>
-                            {student.status === 'Graded' && <CheckCircle2 size={12} className="text-[#22C55E]" />}
+                          <div className="flex justify-between items-end">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{student.date}</p>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-xs font-black tabular-nums tracking-tight ${activeStudentId === student.id ? 'text-[#22C55E]' : 'text-slate-400 group-hover:text-slate-700'}`}>{student.grade}</span>
+                              {student.status === 'Graded' && <CheckCircle2 size={14} className="text-[#22C55E]" />}
+                            </div>
                           </div>
                         </div>
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                 </motion.div>
@@ -339,26 +364,29 @@ export default function FacultyDashboard() {
                       </div>
 
                       <div className="space-y-6 text-slate-700 leading-relaxed text-lg font-medium selection:bg-[#DCFCE7] selection:text-[#166534]">
-                        <p>Building sustainable urban environments requires a multi-faceted approach to resource management and community engagement. Traditional urban planning often neglects the critical role that biodiversified green corridors play in mitigating the "urban heat island" effect.</p>
+                        <p className="hover:text-slate-900 transition-colors cursor-text">Building sustainable urban environments requires a multi-faceted approach to resource management and community engagement. Traditional urban planning often neglects the critical role that biodiversified green corridors play in mitigating the "urban heat island" effect.</p>
 
-                        <p className={hasHighlight ? "bg-yellow-100/60 rounded px-1 transition-colors" : ""}>
+                        <p className={`hover:text-slate-900 transition-colors cursor-text ${hasHighlight ? "bg-yellow-100/60 rounded px-1 transition-colors border-l-4 border-yellow-400 -ml-1 pl-2" : ""}`}>
                           Our research indicates that cities with at least 30% canopy cover experience average summer temperatures 4.5 degrees lower than their less-vegetated counterparts. This reduction in temperature directly leads to lower energy demands for cooling systems, primarily HVAC units.
                         </p>
 
-                        <p>Furthermore, the integration of permeable surfaces in urban design significantly reduces storm-water runoff, which in metropolitan areas frequently leads to localized flooding and the contamination of local water bodies with untreated urban pollutants.</p>
+                        <p className="hover:text-slate-900 transition-colors cursor-text">Furthermore, the integration of permeable surfaces in urban design significantly reduces storm-water runoff, which in metropolitan areas frequently leads to localized flooding and the contamination of local water bodies with untreated urban pollutants.</p>
 
-                        <div className="my-8 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                        <motion.div
+                          whileHover={{ scale: 1.01 }}
+                          className="my-8 p-6 bg-slate-50 cursor-pointer rounded-2xl border border-slate-100 flex items-center justify-between hover:shadow-md hover:border-[#22C55E]/30 transition-all group"
+                        >
                           <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white rounded-xl shadow-sm"><FileText size={20} className="text-[#22C55E]" /></div>
+                            <div className="p-2 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><FileText size={20} className="text-[#22C55E]" /></div>
                             <div>
-                              <p className="text-xs font-black text-slate-900">dataset_urban_emissions.csv</p>
+                              <p className="text-xs font-black text-slate-900 group-hover:text-[#22C55E] transition-colors">dataset_urban_emissions.csv</p>
                               <p className="text-[10px] text-slate-400 font-bold">Attached Analysis Target</p>
                             </div>
                           </div>
                           <button className="text-xs font-black text-slate-400 hover:text-[#22C55E] transition-colors uppercase tracking-widest">View Data</button>
-                        </div>
+                        </motion.div>
 
-                        <p>Community gardens and localized urban agriculture represent another tier of the green revolution. These initiatives don't just provide fresh produce to "food deserts", but also act as social focal points that strengthen community bonds and resilience.</p>
+                        <p className="hover:text-slate-900 transition-colors cursor-text">Community gardens and localized urban agriculture represent another tier of the green revolution. These initiatives don't just provide fresh produce to "food deserts", but also act as social focal points that strengthen community bonds and resilience.</p>
                       </div>
                     </motion.div>
                   </div>
@@ -387,38 +415,73 @@ export default function FacultyDashboard() {
                       <InteractiveRubricSlider label="Topic Relevance" val={rubric.relevance} max={20} onChange={(v) => setRubric({ ...rubric, relevance: v })} />
                     </div>
 
-                    <div className="mt-10 pt-8 border-t border-slate-100">
+                    <div className="mt-10 pt-8 border-t border-slate-100 relative">
                       <div className="flex items-center justify-between mb-4">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Feedback Note</label>
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Feedback Note</label>
+                          {showAIBadge && (
+                            <span className="text-[9px] font-black bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full border border-purple-200 uppercase tracking-widest flex items-center gap-1">
+                              <Sparkles size={10} /> AI Suggested
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1">
                           <button onClick={() => handleFormat('bold')} className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all" title="Bold"><Edit3 size={14} /></button>
                           <button onClick={() => handleFormat('italic')} className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all" title="Italic"><Type size={14} /></button>
                         </div>
                       </div>
-                      <div
-                        ref={feedbackEditorRef}
-                        contentEditable
-                        onInput={(e) => setFeedback(e.currentTarget.innerHTML)}
-                        placeholder="Type your final feedback here..."
-                        className="w-full p-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#DCFCE7] transition-all text-sm font-medium text-slate-700 min-h-[120px] max-h-[120px] overflow-y-auto styled-scrollbar empty:before:content-[attr(placeholder)] empty:before:text-slate-300"
-                        dangerouslySetInnerHTML={{ __html: feedback }}
-                      />
-                      <div className="flex gap-4 mt-6">
-                        <button
+
+                      <div className="relative">
+                        {isAILoading && (
+                          <div className="absolute inset-0 z-10 bg-slate-50 rounded-2xl p-5 flex flex-col gap-3 overflow-hidden">
+                            <div className="w-3/4 h-3 bg-slate-200 rounded animate-pulse" />
+                            <div className="w-full h-3 bg-slate-200 rounded animate-pulse" />
+                            <div className="w-5/6 h-3 bg-slate-200 rounded animate-pulse" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]" />
+                          </div>
+                        )}
+                        <div
+                          ref={feedbackEditorRef}
+                          contentEditable
+                          onInput={(e) => setFeedback(e.currentTarget.innerHTML)}
+                          placeholder="Type your final feedback here..."
+                          className="w-full relative z-0 p-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-[#DCFCE7] transition-all text-sm font-medium text-slate-700 min-h-[120px] max-h-[120px] overflow-y-auto styled-scrollbar empty:before:content-[attr(placeholder)] empty:before:text-slate-300"
+                          dangerouslySetInnerHTML={{ __html: feedback }}
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap gap-4 mt-6">
+                        <motion.button
+                          whileHover={{ scale: activeStudent.status === 'Graded' || isAILoading ? 1 : 1.05 }}
+                          whileTap={{ scale: activeStudent.status === 'Graded' || isAILoading ? 1 : 0.95 }}
+                          onClick={handleAIMock}
+                          disabled={activeStudent.status === 'Graded' || isAILoading}
+                          className="flex-shrink-0 px-4 py-3.5 bg-purple-50 hover:bg-purple-100 text-purple-600 text-sm font-bold rounded-2xl transition-all border border-purple-100 disabled:opacity-50 flex items-center gap-2 group shadow-sm hover:shadow-purple-100"
+                        >
+                          <Sparkles size={16} className="group-hover:text-purple-500 animate-pulse" /> Auto-Suggest
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           onClick={handleSaveDraft}
-                          className="flex-1 py-3.5 bg-white border border-[#E5E7EB] text-slate-700 text-sm font-bold rounded-2xl hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+                          className="flex-1 py-3.5 bg-white border border-[#E5E7EB] text-slate-700 text-sm font-bold rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-95 min-w-[120px]"
                         >
                           Save Draft
-                        </button>
-                        <button
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: activeStudent.status === 'Graded' && totalScore === parseInt(activeStudent.grade) ? 1 : 1.05 }}
+                          whileTap={{ scale: activeStudent.status === 'Graded' && totalScore === parseInt(activeStudent.grade) ? 1 : 0.95 }}
                           onClick={handleSubmitGrade}
                           disabled={activeStudent.status === 'Graded' && totalScore === parseInt(activeStudent.grade)}
-                          className="flex-1 py-3.5 bg-[#22C55E] hover:bg-[#16a34a] disabled:bg-[#A7F3D0] disabled:cursor-not-allowed text-white text-sm font-black rounded-2xl transition-all shadow-lg shadow-[#22C55E]/30 active:scale-95 group relative overflow-hidden"
+                          className="flex-1 py-3.5 bg-[#22C55E] hover:bg-[#16a34a] disabled:bg-[#A7F3D0] disabled:cursor-not-allowed text-white text-sm font-black rounded-2xl transition-all shadow-lg shadow-[#22C55E]/30 group relative overflow-hidden min-w-[140px]"
                         >
-                          <span className="relative z-10 transition-transform block group-active:translate-y-0.5">
+                          <span className="relative z-10 block flex flex-row items-center justify-center gap-2">
                             {activeStudent.status === 'Graded' ? 'Update Grade' : 'Submit Grade'}
+                            {!(activeStudent.status === 'Graded' && totalScore === parseInt(activeStudent.grade)) && (
+                              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                            )}
                           </span>
-                        </button>
+                        </motion.button>
                       </div>
                     </div>
                   </div>
@@ -451,12 +514,13 @@ export default function FacultyDashboard() {
                 <p className="text-slate-500 font-medium">This module is currently being optimized for your experience.</p>
               </motion.div>
             </div>
-          )}
-        </AnimatePresence>
-      </div>
+          )
+          }
+        </AnimatePresence >
+      </div >
 
       {/* Global CSS injected components styling */}
-      <style>{`
+      < style > {`
         .styled-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
         .styled-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .styled-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
@@ -467,98 +531,104 @@ export default function FacultyDashboard() {
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: white; border: 3px solid #22C55E; cursor: pointer; margin-top: -6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); transition: transform 0.1s, box-shadow 0.1s; }
         input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.15); }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #F1F5F9; border-radius: 10px; }
-      `}</style>
+      `}</style >
 
       {/* Toast Notification Container */}
       <AnimatePresence>
-        {toastMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, x: '-50%' }}
-            animate={{ opacity: 1, y: 0, x: '-50%' }}
-            exit={{ opacity: 0, y: 20, x: '-50%' }}
-            className="fixed bottom-10 left-1/2 z-[100] bg-white text-slate-900 border border-[#E5E7EB] shadow-2xl px-6 py-4 rounded-xl flex items-center gap-3 font-bold text-sm"
-          >
-            <div className="w-6 h-6 bg-[#DCFCE7] text-[#22C55E] flex items-center justify-center rounded-full shrink-0">
-              <CheckCircle2 size={14} />
-            </div>
-            {toastMessage}
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {
+          toastMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: 50, x: '-50%' }}
+              animate={{ opacity: 1, y: 0, x: '-50%' }}
+              exit={{ opacity: 0, y: 20, x: '-50%' }}
+              className="fixed bottom-10 left-1/2 z-[100] bg-white text-slate-900 border border-[#E5E7EB] shadow-2xl px-6 py-4 rounded-xl flex items-center gap-3 font-bold text-sm"
+            >
+              <div className="w-6 h-6 bg-[#DCFCE7] text-[#22C55E] flex items-center justify-center rounded-full shrink-0">
+                <CheckCircle2 size={14} />
+              </div>
+              {toastMessage}
+            </motion.div>
+          )
+        }
+      </AnimatePresence >
 
       {/* New Assignment Modal */}
       <AnimatePresence>
-        {showNewAssignmentModal && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-              onClick={() => setShowNewAssignmentModal(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
-            >
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <h2 className="text-xl font-black text-slate-900">Create New Assignment</h2>
-                <button onClick={() => setShowNewAssignmentModal(false)} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-full transition-colors"><X size={20} /></button>
-              </div>
-              <div className="p-8 space-y-5">
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Assignment Title</label>
-                  <input type="text" placeholder="e.g. Midterm Report" className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all" />
+        {
+          showNewAssignmentModal && (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                onClick={() => setShowNewAssignmentModal(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+              >
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <h2 className="text-xl font-black text-slate-900">Create New Assignment</h2>
+                  <button onClick={() => setShowNewAssignmentModal(false)} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-full transition-colors"><X size={20} /></button>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="p-8 space-y-5">
                   <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Course</label>
-                    <select className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all appearance-none">
-                      <option>Env Science 101</option>
-                      <option>Geology 201</option>
-                    </select>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Assignment Title</label>
+                    <input type="text" placeholder="e.g. Midterm Report" className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Course</label>
+                      <select className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all appearance-none">
+                        <option>Env Science 101</option>
+                        <option>Geology 201</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Due Date</label>
+                      <input type="date" className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all" />
+                    </div>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Due Date</label>
-                    <input type="date" className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all" />
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Description</label>
+                    <textarea placeholder="Describe the assignment details..." className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-medium text-slate-700 h-28 resize-none transition-all" />
                   </div>
                 </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Description</label>
-                  <textarea placeholder="Describe the assignment details..." className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-medium text-slate-700 h-28 resize-none transition-all" />
+                <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+                  <button onClick={() => setShowNewAssignmentModal(false)} className="px-6 py-3 font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancel</button>
+                  <button onClick={() => { setShowNewAssignmentModal(false); handleShowToast("New Assignment Created Successfully!"); }} className="px-6 py-3 bg-[#22C55E] text-white font-black rounded-xl hover:bg-[#16a34a] shadow-lg shadow-[#22C55E]/30 transition-all">Publish Assignment</button>
                 </div>
-              </div>
-              <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
-                <button onClick={() => setShowNewAssignmentModal(false)} className="px-6 py-3 font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancel</button>
-                <button onClick={() => { setShowNewAssignmentModal(false); handleShowToast("New Assignment Created Successfully!"); }} className="px-6 py-3 bg-[#22C55E] text-white font-black rounded-xl hover:bg-[#16a34a] shadow-lg shadow-[#22C55E]/30 transition-all">Publish Assignment</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              </motion.div>
+            </div>
+          )
+        }
+      </AnimatePresence >
 
       {/* Logout Confirmation Modal */}
       <AnimatePresence>
-        {showLogoutModal && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowLogoutModal(false)} />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl p-8 text-center flex flex-col items-center">
-              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
-                <LogOut size={28} />
-              </div>
-              <h2 className="text-2xl font-black text-slate-900 mb-2">Log Out?</h2>
-              <p className="text-slate-500 font-medium mb-8">Are you sure you want to end your session?</p>
-              <div className="flex w-full gap-3">
-                <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-3.5 font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">Cancel</button>
-                <button onClick={logout} className="flex-1 py-3.5 bg-red-500 text-white font-black hover:bg-red-600 rounded-xl shadow-lg shadow-red-500/30 transition-all">Log Out</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+        {
+          showLogoutModal && (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowLogoutModal(false)} />
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl p-8 text-center flex flex-col items-center">
+                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
+                  <LogOut size={28} />
+                </div>
+                <h2 className="text-2xl font-black text-slate-900 mb-2">Log Out?</h2>
+                <p className="text-slate-500 font-medium mb-8">Are you sure you want to end your session?</p>
+                <div className="flex w-full gap-3">
+                  <button onClick={() => setShowLogoutModal(false)} className="flex-1 py-3.5 font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">Cancel</button>
+                  <button onClick={logout} className="flex-1 py-3.5 bg-red-500 text-white font-black hover:bg-red-600 rounded-xl shadow-lg shadow-red-500/30 transition-all">Log Out</button>
+                </div>
+              </motion.div>
+            </div>
+          )
+        }
+      </AnimatePresence >
+    </motion.div >
   );
 }
 
@@ -569,21 +639,17 @@ function StatCard({ icon, title, value, suffix, badge, progress, delay, suffixCo
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay }}
-      whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)" }}
-      className="bg-white p-6 rounded-[2rem] border border-[#E5E7EB] flex flex-col gap-3 shadow-sm transition-all relative h-[160px] group overflow-hidden"
+      className="bg-white p-6 rounded-[2rem] border border-[#E5E7EB] flex flex-col gap-3 shadow-sm relative h-[160px] group overflow-hidden hover-lift transition-all"
     >
       <div className="flex items-start justify-between relative z-10">
         <div>
           <p className="text-[11px] font-bold text-slate-500 mb-0.5 uppercase tracking-wider">{title}</p>
           <div className="flex items-baseline gap-1 mt-1">
-            <motion.h3
-              key={value}
-              initial={{ scale: 0.95, opacity: 0.8 }}
-              animate={{ scale: 1, opacity: 1 }}
+            <h3
               className="text-4xl leading-none font-black text-slate-900 tracking-tight"
             >
-              {value}
-            </motion.h3>
+              {typeof value === 'number' ? <CountUp end={value} duration={2} separator="," /> : value}
+            </h3>
           </div>
         </div>
         <div className="shrink-0 bg-slate-50 p-2.5 rounded-2xl group-hover:scale-110 transition-transform duration-300">
@@ -613,17 +679,29 @@ function StatCard({ icon, title, value, suffix, badge, progress, delay, suffixCo
 function InteractiveRubricSlider({ label, val, max, onChange }: { label: string, val: number, max: number, onChange: (v: number) => void }) {
   const percent = (val / max) * 100;
 
+  // Color coded logic
+  const trackColor = percent <= 40 ? '#EAB308' : percent <= 70 ? '#84CC16' : '#22C55E';
+  const trackBgClass = percent <= 40 ? 'bg-yellow-50 text-yellow-600' : percent <= 70 ? 'bg-lime-50 text-lime-600' : 'bg-[#DCFCE7] text-[#22C55E]';
+
   return (
-    <div className="space-y-3 group">
-      <div className="flex justify-between text-xs font-bold">
-        <span className="text-slate-700 transition-colors group-hover:text-slate-900">{label}</span>
-        <span className="text-[#22C55E] tabular-nums bg-[#DCFCE7] px-2 py-0.5 rounded-md">{val} <span className="text-slate-400 font-medium">/ {max}</span></span>
+    <div className="space-y-4 group">
+      <div className="flex justify-between text-xs font-bold items-end mb-1">
+        <span className="text-slate-500 uppercase tracking-widest text-[10px] transition-colors group-hover:text-slate-900">{label}</span>
+        <motion.span
+          key={val}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className={`${trackBgClass} tabular-nums transition-colors px-3 py-1 rounded-lg shadow-sm border border-black/5`}
+        >
+          {val} <span className="opacity-50 text-[10px]">/ {max}</span>
+        </motion.span>
       </div>
-      <div className="relative">
-        <div className="absolute inset-0 top-1/2 -translate-y-1/2 h-1.5 bg-slate-100 rounded-full pointer-events-none" />
-        <div
-          className="absolute left-0 top-1/2 -translate-y-1/2 h-1.5 bg-[#22C55E] rounded-full pointer-events-none transition-all duration-75"
-          style={{ width: `${percent}%` }}
+      <div className="relative group/track">
+        <div className="absolute inset-0 top-1/2 -translate-y-1/2 h-2.5 bg-slate-100 rounded-full pointer-events-none border inset-shadow-sm border-black/5" />
+        <motion.div
+          className="absolute left-0 top-1/2 -translate-y-1/2 h-2.5 rounded-full pointer-events-none shadow-[0_0_10px_currentColor] brightness-110"
+          animate={{ width: `${percent}%`, backgroundColor: trackColor, color: trackColor }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
         />
         <input
           type="range"
@@ -631,7 +709,7 @@ function InteractiveRubricSlider({ label, val, max, onChange }: { label: string,
           max={max}
           value={val}
           onChange={(e) => onChange(parseInt(e.target.value))}
-          className="w-full relative z-10 opacity-0 cursor-pointer h-6"
+          className="w-full relative z-10 opacity-0 cursor-pointer h-8 group-hover/track:scale-105 transition-transform"
         />
       </div>
     </div>
