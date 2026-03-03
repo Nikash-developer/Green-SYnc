@@ -128,7 +128,7 @@ const themes = {
 const StatCard: React.FC<{ icon: React.ReactNode, label: string, value: string | number, trend: string, color: string, isNumeric?: boolean, theme: any }> = ({ icon, label, value, trend, color, isNumeric, theme: t }) => (
   <motion.div
     whileHover={{ y: -5 }}
-    className={`${t.card} p-8 rounded-[2rem] shadow-sm border ${t.border} flex flex-col justify-between group transition-all duration-500 hover:shadow-xl hover:shadow-slate-200/50`}
+    className={`${t.card} p-5 lg:p-8 rounded-2xl lg:rounded-[2rem] shadow-sm border ${t.border} flex flex-col justify-between group transition-all duration-500 hover:shadow-xl hover:shadow-slate-200/50`}
   >
     <div className="flex justify-between items-start mb-6">
       <div className={`${t.accentBg} ${t.accent} p-3 rounded-2xl group-hover:scale-110 transition-transform`}>
@@ -139,8 +139,8 @@ const StatCard: React.FC<{ icon: React.ReactNode, label: string, value: string |
       </div>
     </div>
     <div>
-      <p className={`text-xs font-black ${t.muted} uppercase tracking-widest mb-1`}>{label}</p>
-      <div className={`text-4xl font-black ${t.heading} tracking-tight`}>
+      <p className={`text-[10px] lg:text-xs font-black ${t.muted} uppercase tracking-widest mb-1`}>{label}</p>
+      <div className={`text-2xl lg:text-4xl font-black ${t.heading} tracking-tight`}>
         {isNumeric ? <CountUp end={Number(value)} duration={2} /> : value}
       </div>
     </div>
@@ -148,10 +148,10 @@ const StatCard: React.FC<{ icon: React.ReactNode, label: string, value: string |
 );
 
 const NoticeItem: React.FC<{ notice: Notice, theme: any }> = ({ notice, theme: t }) => (
-  <div className={`p-6 rounded-[2.5rem] ${t.card} border ${t.border} hover:border-primary/20 transition-all duration-500 group relative overflow-hidden`}>
-    <div className="flex items-start gap-6 relative z-10">
-      <div className={`p-4 rounded-3xl ${notice.is_emergency ? 'bg-red-50 text-red-500' : t.accentBg + ' ' + t.accent} group-hover:scale-110 transition-transform`}>
-        {notice.is_emergency ? <AlertCircle size={28} /> : <Megaphone size={28} />}
+  <div className={`p-5 lg:p-6 rounded-3xl lg:rounded-[2.5rem] ${t.card} border ${t.border} hover:border-primary/20 transition-all duration-500 group relative overflow-hidden`}>
+    <div className="flex items-start gap-4 lg:gap-6 relative z-10">
+      <div className={`p-3 lg:p-4 rounded-2xl lg:rounded-3xl ${notice.is_emergency ? 'bg-red-50 text-red-500' : t.accentBg + ' ' + t.accent} group-hover:scale-110 transition-transform`}>
+        {notice.is_emergency ? <AlertCircle size={24} className="lg:w-7 lg:h-7" /> : <Megaphone size={24} className="lg:w-7 lg:h-7" />}
       </div>
       <div className="flex-1">
         <div className="flex items-center justify-between mb-2">
@@ -1500,27 +1500,27 @@ export default function StudentDashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className={`min-h-screen transition-all duration-500 font-sans ${t.bg} ${t.text} overflow-x-hidden pb-20 lg:pb-0`}>
+    <div className={`min-h-screen transition-all duration-500 font-sans ${t.bg} ${t.text} overflow-x-hidden pb-28 lg:pb-0`}>
       {/* Top Navigation Bar */}
       <header className={`sticky top-0 z-50 ${t.header} border-b px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between shadow-sm transition-all duration-500`}>
-        <div className="flex items-center gap-4 lg:gap-12">
+        <div className="flex items-center gap-3 lg:gap-12">
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setIsMobileMenuOpen(true)}
-            className="lg:hidden p-2 text-slate-600 hover:text-slate-900"
+            className="lg:hidden p-2 text-primary hover:bg-primary/5 rounded-xl transition-colors"
           >
             <div className="flex flex-col gap-1.5 w-6">
               <div className="h-0.5 w-full bg-current rounded-full"></div>
               <div className="h-0.5 w-full bg-current rounded-full"></div>
-              <div className="h-0.5 w-full bg-current rounded-full"></div>
+              <div className="h-0.5 w-3/4 bg-current rounded-full"></div>
             </div>
           </button>
 
           <div className="flex items-center gap-2 lg:gap-3 cursor-pointer group" onClick={() => setActiveTab('dashboard')}>
-            <div className="bg-primary p-2 rounded-xl lg:p-2.5 lg:rounded-2xl shadow-lg transform group-hover:rotate-12 transition-transform">
-              <Leaf size={24} className="text-white lg:w-7 lg:h-7" />
+            <div className="bg-primary p-2 rounded-lg lg:p-2.5 lg:rounded-2xl shadow-lg transform group-hover:rotate-12 transition-transform">
+              <Leaf size={20} className="text-white lg:w-7 lg:h-7" />
             </div>
-            <span className={`text-xl lg:text-2xl font-black tracking-tight ${t.heading} italic transition-colors`}>Green-Sync</span>
+            <span className={`text-lg lg:text-2xl font-black tracking-tight ${t.heading} italic transition-colors`}>Green-Sync</span>
           </div>
 
           <div className="relative w-64 xl:w-80 hidden lg:block">
@@ -1712,10 +1712,10 @@ export default function StudentDashboard() {
                 {/* Left Column */}
                 <div className="lg:col-span-8 space-y-8">
                   {/* Notice Feed */}
-                  <section className={`${t.card} p-8 rounded-[2rem] shadow-sm border ${t.border}`}>
-                    <div className="flex items-center justify-between mb-8">
-                      <h2 className={`text-xl font-black ${t.heading} flex items-center gap-3`}>
-                        <BellRing className="text-primary" />
+                  <section className={`${t.card} p-5 lg:p-8 rounded-3xl lg:rounded-[2rem] shadow-sm border ${t.border}`}>
+                    <div className="flex items-center justify-between mb-6 lg:mb-8">
+                      <h2 className={`text-lg lg:text-xl font-black ${t.heading} flex items-center gap-2 lg:gap-3`}>
+                        <BellRing className="text-primary w-5 h-5 lg:w-6 lg:h-6" />
                         Live Notice Feed
                       </h2>
                       <button
@@ -2248,8 +2248,9 @@ export default function StudentDashboard() {
                 </div>
               </div>
 
-              <div className={`${t.card} rounded-[2rem] shadow-sm border ${t.border} overflow-hidden`}>
-                <div className="overflow-x-auto">
+              <div className="rounded-[2rem] overflow-hidden">
+                {/* Desktop View */}
+                <div className="hidden lg:block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
                   <table className="w-full text-left">
                     <thead>
                       <tr className={`${t.search} border-b ${t.border}`}>
@@ -2300,15 +2301,53 @@ export default function StudentDashboard() {
                     </tbody>
                   </table>
                 </div>
-                {filteredPapers.length === 0 && (
-                  <div className="p-20 text-center">
-                    <div className={`${t.search} w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${t.muted} opacity-20`}>
-                      <FileQuestion size={40} />
-                    </div>
-                    <p className={`${t.muted} font-bold`}>No question papers found for the selected filters.</p>
-                  </div>
-                )}
+
+                {/* Mobile View */}
+                <div className="lg:hidden grid grid-cols-1 gap-4">
+                  {filteredPapers.map((paper) => (
+                    <motion.div
+                      key={paper.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className={`${t.card} p-5 rounded-3xl border ${t.border} shadow-sm flex flex-col gap-4 relative overflow-hidden group`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2.5 bg-primary/10 text-primary rounded-xl`}>
+                            <FileQuestion size={20} />
+                          </div>
+                          <div>
+                            <h3 className={`text-sm font-black ${t.heading} leading-tight mb-1`}>{paper.subject}</h3>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-bold ${t.muted} bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-md`}>{paper.year}</span>
+                              <span className={`text-[10px] font-bold ${t.muted} bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-md`}>{paper.semester}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${paper.type === 'Regular' ? 'bg-green-50/50 text-green-600' : 'bg-orange-50/50 text-orange-600'}`}>
+                          {paper.type}
+                        </span>
+                      </div>
+                      <a
+                        href={paper.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white rounded-2xl font-black text-xs shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                      >
+                        <FileDown size={14} /> View Document
+                      </a>
+                    </motion.div>
+                  ))}
+                </div>
               </div>
+              {filteredPapers.length === 0 && (
+                <div className="p-20 text-center">
+                  <div className={`${t.search} w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${t.muted} opacity-20`}>
+                    <FileQuestion size={40} />
+                  </div>
+                  <p className={`${t.muted} font-bold`}>No question papers found for the selected filters.</p>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -2319,9 +2358,9 @@ export default function StudentDashboard() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: -30 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="space-y-10"
+              className="space-y-6 lg:space-y-10"
             >
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-gradient-to-br from-primary/10 to-transparent p-10 rounded-[3rem] border border-primary/10 backdrop-blur-sm relative overflow-hidden group">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-gradient-to-br from-primary/10 to-transparent p-6 lg:p-10 rounded-3xl lg:rounded-[3rem] border border-primary/10 backdrop-blur-sm relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
 
                 <div className="relative z-10">
@@ -4192,27 +4231,38 @@ export default function StudentDashboard() {
         )}
       </AnimatePresence>
       {/* Mobile Bottom Navigation */}
-      <div className={`lg:hidden fixed bottom-6 left-4 right-4 z-[90] ${t.header} border ${t.border} rounded-full shadow-2xl p-2 flex items-center justify-around backdrop-blur-md`}>
+      <div className={`lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] w-[90vw] max-w-sm ${t.header} border ${t.border} rounded-[2.5rem] shadow-2xl p-2.5 flex items-center justify-between backdrop-blur-xl border-white/20`}>
         {[
-          { id: 'dashboard', icon: <LayoutDashboard size={22} />, label: 'Home' },
-          { id: 'courses', icon: <BookOpen size={22} />, label: 'Study' },
-          { id: 'assignment-submission', icon: <Upload size={22} />, label: 'Submit' },
-          { id: 'eco-tracker', icon: <TreePine size={22} />, label: 'Eco' },
-          { id: 'settings', icon: <Settings size={22} />, label: 'Profile' }
+          { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Home' },
+          { id: 'courses', icon: <BookOpen size={20} />, label: 'Study' },
+          { id: 'assignment-submission', icon: <Upload size={20} />, label: 'Submit' },
+          { id: 'papers', icon: <FileQuestion size={20} />, label: 'Papers' },
+          { id: 'eco-tracker', icon: <TreePine size={20} />, label: 'Eco' }
         ].map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id as Tab)}
-            className={`flex flex-col items-center justify-center w-12 h-12 rounded-full transition-all ${activeTab === item.id
-              ? 'bg-primary text-white shadow-lg shadow-primary/20'
-              : t.muted + ' hover:bg-black/5'
-              }`}
+            className="flex-1 relative group py-2"
           >
-            {item.icon}
+            <div className={`mx-auto flex flex-col items-center justify-center transition-all duration-300 ${activeTab === item.id ? 'scale-110 -translate-y-1' : 'opacity-60 grayscale hover:opacity-100'}`}>
+              <div className={`p-2.5 rounded-2xl transition-all duration-500 ${activeTab === item.id ? 'bg-primary text-white shadow-lg shadow-primary/30 rotate-0' : 'bg-transparent rotate-0'}`}>
+                {item.icon}
+              </div>
+              <motion.span
+                initial={false}
+                animate={{
+                  opacity: activeTab === item.id ? 1 : 0,
+                  y: activeTab === item.id ? 2 : 10
+                }}
+                className={`text-[9.5px] font-black uppercase tracking-tighter mt-1 whitespace-nowrap ${activeTab === item.id ? 'text-primary' : 'text-slate-400'}`}
+              >
+                {item.label}
+              </motion.span>
+            </div>
           </button>
         ))}
       </div>
-    </div>
+    </div >
   );
 }
 
