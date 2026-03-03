@@ -1878,9 +1878,9 @@ export default function StudentDashboard() {
                     </div>
                     <div className={`mt-8 pt-6 lg:mt-10 lg:pt-8 border-t ${t.border}`}>
                       <div className="bg-primary/5 p-6 lg:p-8 rounded-3xl lg:rounded-[2rem] text-center border border-primary/10">
-                        <p className={`text-[9px] lg:text-[10px] font-bold ${t.muted} uppercase tracking-widest mb-1 lg:mb-2`}>Your Department Rank</p>
+                        <p className={`text-[9px] lg:text-[10px] font-bold ${t.muted} uppercase tracking-widest mb-1 lg:mb-2`}>Your Rank</p>
                         <p className="text-4xl lg:text-5xl font-black text-primary mb-1 lg:mb-2">#{(user?.department === 'Biology' || user?.department === 'History' || user?.department === 'Math' || user?.department === 'CS') ? '1-4' : '5'}</p>
-                        <p className={`text-[10px] lg:text-xs font-bold ${t.muted}`}>{user?.department || 'Computer Engineering'}</p>
+                        <p className={`text-[10px] lg:text-xs font-bold ${t.muted}`}>{user?.department || 'GreenSync Campus'}</p>
                       </div>
                     </div>
                   </motion.section>
