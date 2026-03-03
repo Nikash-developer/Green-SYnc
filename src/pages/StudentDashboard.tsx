@@ -895,12 +895,29 @@ export default function StudentDashboard() {
   }, [papers]);
 
   const filteredPapers = useMemo(() => {
-    return allPapersSource.filter(p => {
-      const matchSemester = selectedPaperSemester === 'All Semesters' || p.semester === selectedPaperSemester;
-      const matchYear = selectedPaperYear === 'All Years' || p.year === selectedPaperYear;
-      const matchSearch = (p.subject?.toLowerCase() || '').includes(paperSearchQuery.toLowerCase());
-      return matchSemester && matchYear && matchSearch;
-    });
+    return allPapersSource
+      .filter(p => {
+        const matchSemester = selectedPaperSemester === 'All Semesters' || p.semester === selectedPaperSemester;
+        const matchYear = selectedPaperYear === 'All Years' || p.year === selectedPaperYear;
+        const matchSearch = (p.subject?.toLowerCase() || '').includes(paperSearchQuery.toLowerCase());
+        return matchSemester && matchYear && matchSearch;
+      })
+      .sort((a, b) => {
+        // Prioritize COMP/Computer Engineering papers
+        const aIsComp = (a.subject?.toUpperCase().includes('COMP') || a.subject?.toUpperCase().includes('COMPUTER'));
+        const bIsComp = (b.subject?.toUpperCase().includes('COMP') || b.subject?.toUpperCase().includes('COMPUTER'));
+
+        if (aIsComp && !bIsComp) return -1;
+        if (!aIsComp && bIsComp) return 1;
+
+        // Secondary sort: Year (Newest first)
+        const yearA = parseInt(a.year) || 0;
+        const yearB = parseInt(b.year) || 0;
+        if (yearB !== yearA) return yearB - yearA;
+
+        // Tertiary sort: Subject Alphabetical
+        return (a.subject || '').localeCompare(b.subject || '');
+      });
   }, [allPapersSource, selectedPaperSemester, selectedPaperYear, paperSearchQuery]);
 
   const semesterOptions = useMemo(() => {
