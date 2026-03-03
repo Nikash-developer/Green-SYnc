@@ -4226,8 +4226,10 @@ export default function StudentDashboard() {
             initial={{ opacity: 0, y: 50, scale: 0.9, x: 20 }}
             animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
             exit={{ opacity: 0, y: 50, scale: 0.9, x: 20 }}
-            className={`fixed bottom-28 right-8 w-[400px] h-[600px] ${t.card} rounded-[3rem] shadow-[-20px_20px_60px_rgba(0,0,0,0.1)] z-[400] overflow-hidden flex flex-col border ${t.border}`}
+            className={`fixed bottom-0 lg:bottom-32 right-0 lg:right-8 w-full lg:w-[400px] h-[92vh] lg:h-[600px] ${t.card} rounded-t-[3rem] lg:rounded-[3rem] shadow-[-20px_20px_60px_rgba(0,0,0,0.1)] z-[400] overflow-hidden flex flex-col border ${t.border}`}
           >
+            {/* Mobile Close Bar */}
+            <div className="lg:hidden w-12 h-1.5 bg-primary/20 rounded-full mx-auto mt-4 mb-2" onClick={() => setShowAssistant(false)} />
             {/* Header */}
             <div className={`${t.card} p-8 ${t.heading} relative overflow-hidden border-b ${t.border}`}>
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -translate-y-12 translate-x-12" />
@@ -4275,7 +4277,7 @@ export default function StudentDashboard() {
             </div>
 
             {/* Input Area */}
-            <div className={`p-6 border-t ${t.border}`}>
+            <div className={`p-6 pb-10 lg:pb-6 border-t ${t.border} ${t.search} backdrop-blur-xl`}>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -4288,12 +4290,12 @@ export default function StudentDashboard() {
                   placeholder="Ask anything..."
                   value={assistantInput}
                   onChange={(e) => setAssistantInput(e.target.value)}
-                  className={`w-full pl-6 pr-14 py-4 ${t.search} border-none rounded-2xl focus:ring-2 focus:ring-primary/20 font-bold text-sm ${t.text}`}
+                  className={`w-full pl-6 pr-14 py-4 ${t.card} border-none rounded-2xl focus:ring-2 focus:ring-primary/40 font-bold text-sm ${t.text} shadow-inner shadow-primary/5`}
                 />
                 <button
                   type="submit"
                   disabled={!assistantInput.trim() || isAssistantTyping}
-                  className="absolute right-2 top-2 w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center hover:opacity-90 transition-all disabled:opacity-30 shadow-lg shadow-primary/20"
+                  className="absolute right-2 top-2 w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-30 shadow-lg shadow-primary/20"
                 >
                   <ArrowUpRight size={20} />
                 </button>

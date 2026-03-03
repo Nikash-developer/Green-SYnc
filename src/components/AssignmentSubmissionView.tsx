@@ -251,9 +251,9 @@ export const AssignmentSubmissionView: React.FC<{ theme: any }> = ({ theme: t })
     };
 
     return (
-        <div className="flex gap-8 animate-in fade-in duration-500">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Left Sidebar - Upcoming & Feedback */}
-            <aside className="w-80 space-y-8 flex-shrink-0">
+            <aside className="w-full lg:w-80 space-y-8 flex-shrink-0">
                 <section className="space-y-4">
                     <h3 className={`text-[10px] font-black ${t.muted} uppercase tracking-widest ml-1`}>Upcoming Tasks</h3>
                     <div className="space-y-3">
@@ -271,11 +271,12 @@ export const AssignmentSubmissionView: React.FC<{ theme: any }> = ({ theme: t })
                                     <motion.button
                                         key={item.id}
                                         layout
-                                        whileHover={{ x: 4 }}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
                                         onClick={() => handleAssignmentSwitch(item)}
-                                        className={`w-full text-left p-4 rounded-2xl border transition-all ${isSelected
-                                            ? `bg-primary/5 border-primary shadow-lg shadow-primary/5`
-                                            : isDone ? `${t.search} ${t.border} opacity-60` : `${t.card} ${t.border} hover:border-primary/20`
+                                        className={`w-full text-left p-5 rounded-3xl border transition-all ${isSelected
+                                            ? `bg-primary/5 border-primary shadow-xl shadow-primary/5 ring-1 ring-primary/20`
+                                            : isDone ? `${t.search} ${t.border} opacity-50` : `${t.card} ${t.border} hover:border-primary/20`
                                             }`}
                                     >
                                         <div className="flex items-center gap-3 mb-2">
@@ -284,17 +285,17 @@ export const AssignmentSubmissionView: React.FC<{ theme: any }> = ({ theme: t })
                                                 style={isDone ? {} : { backgroundColor: item.color }}
                                             />
                                             <span className={`text-[10px] font-black ${t.muted} uppercase tracking-widest`}>
-                                                {item.courseCode} • {isDone ? 'Done' : 'Upcoming'}
+                                                {item.courseCode} • {isDone ? 'Finished' : 'Upcoming'}
                                             </span>
                                         </div>
-                                        <h4 className={`text-sm font-bold leading-tight ${isSelected ? 'text-primary' : isDone ? `${t.muted} line-through` : t.text
+                                        <h4 className={`text-sm font-black leading-tight ${isSelected ? 'text-primary' : isDone ? `${t.muted}` : t.heading
                                             }`}>
                                             {item.title}
                                         </h4>
-                                        <div className="mt-3 flex items-center justify-between">
+                                        <div className="mt-4 flex items-center justify-between">
                                             <div className={`flex items-center gap-1.5 text-[10px] font-bold ${t.muted}`}>
-                                                <Clock size={12} />
-                                                <span>{new Date(item.deadline).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                                                <Clock size={12} className="text-primary/60" />
+                                                <span>{new Date(item.deadline).toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' })}</span>
                                             </div>
                                             <ChevronRight size={14} className={isSelected ? 'text-primary' : t.muted} />
                                         </div>
@@ -310,20 +311,22 @@ export const AssignmentSubmissionView: React.FC<{ theme: any }> = ({ theme: t })
                         {mockFeedback.map((fb) => (
                             <motion.div
                                 key={fb.id}
-                                whileHover={{ y: -4, scale: 1.02 }}
+                                whileHover={{ y: -6, scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
                                 onClick={() => setShowFeedbackModal(fb)}
-                                className={`${t.card} p-5 rounded-2xl shadow-sm border ${t.border} cursor-pointer transition-all hover:shadow-lg hover:border-primary/20 group`}
+                                className={`${t.card} p-6 rounded-3xl shadow-sm border ${t.border} cursor-pointer transition-all hover:shadow-2xl hover:border-primary/30 group relative overflow-hidden`}
                             >
-                                <div className="flex justify-between items-start mb-2">
-                                    <span className="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-full">{fb.assignmentName}</span>
+                                <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-full blur-2xl -translate-y-6 translate-x-6" />
+                                <div className="flex justify-between items-start mb-3 relative z-10">
+                                    <span className="text-[9px] font-black text-primary px-3 py-1 bg-primary/10 rounded-full uppercase tracking-wider">{fb.assignmentName}</span>
                                     <span className={`text-[10px] font-bold ${t.muted}`}>{fb.timeAgo}</span>
                                 </div>
-                                <p className={`text-xs ${t.muted} line-clamp-2 italic mb-4 leading-relaxed transition-colors group-hover:${t.text}`}>
+                                <p className={`text-xs ${t.text} font-medium line-clamp-3 italic mb-5 leading-relaxed relative z-10`}>
                                     "{fb.quote}"
                                 </p>
-                                <div className="flex items-center gap-2">
-                                    <img src={fb.instructor.avatar} alt={fb.instructor.name} className={`w-6 h-6 rounded-full border ${t.border}`} />
-                                    <span className={`text-[10px] font-bold ${t.muted}`}>{fb.instructor.name}</span>
+                                <div className="flex items-center gap-3 relative z-10">
+                                    <img src={fb.instructor.avatar} alt={fb.instructor.name} className={`w-7 h-7 rounded-xl border-2 ${t.border} shadow-sm`} />
+                                    <span className={`text-[10px] font-black ${t.muted}`}>{fb.instructor.name}</span>
                                 </div>
                             </motion.div>
                         ))}
@@ -342,36 +345,40 @@ export const AssignmentSubmissionView: React.FC<{ theme: any }> = ({ theme: t })
                         transition={{ duration: 0.3 }}
                         className="space-y-8"
                     >
-                        <div className="flex justify-between items-start">
-                            <div className="space-y-2">
+                        <div className="flex flex-col md:flex-row justify-between items-start gap-6">
+                            <div className="space-y-3 flex-1 w-full">
                                 <span
-                                    className="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full"
+                                    className="px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] rounded-full inline-block"
                                     style={{ backgroundColor: `${selectedAssignment.color}15`, color: selectedAssignment.color }}
                                 >
                                     {selectedAssignment.courseCode} • {selectedAssignment.course}
                                 </span>
-                                <h1 className={`text-4xl font-black ${t.heading} leading-tight`}>
+                                <h1 className={`text-3xl lg:text-5xl font-black ${t.heading} leading-tight`}>
                                     {selectedAssignment.title}
                                 </h1>
-                                <p className={`${t.muted} font-medium max-w-2xl`}>{selectedAssignment.description}</p>
+                                <p className={`${t.muted} font-medium text-sm lg:text-base max-w-2xl leading-relaxed`}>{selectedAssignment.description}</p>
                             </div>
 
-                            <div className={`${t.card} p-4 rounded-[2rem] shadow-sm border ${t.border} flex items-center gap-6 px-8`}>
+                            <div className={`${t.card} p-5 lg:p-6 rounded-[2.5rem] shadow-xl border ${t.border} flex items-center justify-center gap-6 px-10 w-full md:w-auto`}>
                                 <div className="text-center">
-                                    <p className={`text-2xl font-black ${t.heading} tabular-nums`}>{formatNumber(timeLeft.days)}</p>
-                                    <p className={`text-[8px] font-bold ${t.muted} uppercase tracking-widest text-opacity-50`}>Days</p>
+                                    <p className={`text-2xl lg:text-3xl font-black ${t.heading} tabular-nums mb-0.5`}>{formatNumber(timeLeft.days)}</p>
+                                    <p className={`text-[8px] font-black ${t.muted} uppercase tracking-[0.2em] text-opacity-60`}>Days</p>
                                 </div>
-                                <span className={`${t.muted} opacity-20 font-black mb-4`}>:</span>
-                                <div className="text-center">
-                                    <p className={`text-2xl font-black ${t.heading} tabular-nums`}>{formatNumber(timeLeft.hrs)}</p>
-                                    <p className={`text-[8px] font-bold ${t.muted} uppercase tracking-widest text-opacity-50`}>Hrs</p>
+                                <div className="flex flex-col items-center">
+                                    <span className={`${t.muted} opacity-30 font-black text-xl mb-4 leading-none`}>:</span>
                                 </div>
-                                <span className={`${t.muted} opacity-20 font-black mb-4`}>:</span>
                                 <div className="text-center">
-                                    <p className={`text-2xl font-black tabular-nums ${timeLeft.days === 0 && timeLeft.hrs < 24 ? 'text-red-500' : t.heading}`}>
+                                    <p className={`text-2xl lg:text-3xl font-black ${t.heading} tabular-nums mb-0.5`}>{formatNumber(timeLeft.hrs)}</p>
+                                    <p className={`text-[8px] font-black ${t.muted} uppercase tracking-[0.2em] text-opacity-60`}>Hrs</p>
+                                </div>
+                                <div className="flex flex-col items-center">
+                                    <span className={`${t.muted} opacity-30 font-black text-xl mb-4 leading-none`}>:</span>
+                                </div>
+                                <div className="text-center">
+                                    <p className={`text-2xl lg:text-3xl font-black tabular-nums mb-0.5 ${timeLeft.days === 0 && timeLeft.hrs < 24 ? 'text-red-500' : t.heading}`}>
                                         {formatNumber(timeLeft.min)}
                                     </p>
-                                    <p className={`text-[8px] font-bold ${t.muted} uppercase tracking-widest text-opacity-50`}>Min</p>
+                                    <p className={`text-[8px] font-black ${t.muted} uppercase tracking-[0.2em] text-opacity-60`}>Min</p>
                                 </div>
                             </div>
                         </div>
@@ -380,7 +387,7 @@ export const AssignmentSubmissionView: React.FC<{ theme: any }> = ({ theme: t })
                             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
                             onDragLeave={() => setIsDragOver(false)}
                             onDrop={handleFileDrop}
-                            className={`relative h-96 rounded-[3rem] border-2 border-dashed transition-all flex flex-col items-center justify-center p-8 text-center ${t.card} shadow-sm overflow-hidden ${isDragOver ? 'border-primary bg-primary/5 scale-[0.99]' : `${t.border} hover:border-primary/30`
+                            className={`relative h-[20rem] lg:h-96 rounded-[2.5rem] lg:rounded-[4rem] border-2 border-dashed transition-all flex flex-col items-center justify-center p-6 lg:p-12 text-center ${t.card} shadow-sm overflow-hidden ${isDragOver ? 'border-primary bg-primary/5 scale-[0.99] ring-8 ring-primary/5' : `${t.border} hover:border-primary/40 hover:bg-primary/[0.01]`
                                 }`}
                         >
                             {uploadStatus === 'idle' ? (
@@ -495,49 +502,49 @@ export const AssignmentSubmissionView: React.FC<{ theme: any }> = ({ theme: t })
                             )}
                         </section>
 
-                        <div className="grid grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                             <motion.div
                                 initial={false}
-                                animate={{ borderColor: plagiarismStatus === 'completed' ? (plagiarismPercent > 15 ? '#FCA5A5' : '#818CF8') : (t.border.includes('slate-100') ? '#F1F5F9' : '#334155') }}
-                                className={`${t.card} p-8 rounded-[2.5rem] shadow-sm border-2 transition-colors space-y-6`}
+                                animate={{ borderColor: plagiarismStatus === 'completed' ? (plagiarismPercent > 15 ? '#FCA5A5' : '#10B981') : (t.border.includes('slate-100') ? '#F1F5F9' : '#334155') }}
+                                className={`${t.card} p-7 lg:p-8 rounded-[2.5rem] lg:rounded-[3rem] shadow-sm border-2 transition-colors space-y-7`}
                             >
                                 <div className="flex justify-between items-start">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-3 rounded-2xl ${plagiarismStatus === 'completed' ? (plagiarismPercent > 15 ? 'bg-red-50 text-red-500' : 'bg-indigo-50 text-indigo-500') : `${t.search} ${t.muted}`}`}>
-                                            <Shield size={20} />
+                                    <div className="flex items-center gap-4">
+                                        <div className={`p-4 rounded-2xl shadow-sm ${plagiarismStatus === 'completed' ? (plagiarismPercent > 15 ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-500') : `${t.search} ${t.muted}`}`}>
+                                            <Shield size={24} />
                                         </div>
                                         <div>
-                                            <h4 className={`font-black ${t.heading}`}>Plagiarism Check</h4>
-                                            <p className={`text-xs font-bold ${t.muted} uppercase tracking-widest`}>
+                                            <h4 className={`text-lg font-black ${t.heading}`}>Plagiarism Check</h4>
+                                            <p className={`text-[10px] font-black ${t.muted} uppercase tracking-[0.2em]`}>
                                                 {plagiarismStatus === 'ready' && 'Ready to scan'}
-                                                {plagiarismStatus === 'scanning' && 'Scanning content...'}
+                                                {plagiarismStatus === 'scanning' && 'Analyzing content...'}
                                                 {plagiarismStatus === 'completed' && 'Analysis complete'}
                                             </p>
                                         </div>
                                     </div>
                                     {plagiarismStatus === 'completed' && (
-                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${plagiarismPercent > 15 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-                                            {plagiarismPercent > 15 ? 'Warning' : 'Safe'}
+                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${plagiarismPercent > 15 ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'}`}>
+                                            {plagiarismPercent > 15 ? 'Major Similarity' : 'Verified Unique'}
                                         </span>
                                     )}
                                 </div>
-                                <div className="space-y-4">
-                                    <div className={`h-2 ${t.search} rounded-full overflow-hidden`}>
+                                <div className="space-y-5">
+                                    <div className={`h-3 ${t.search} rounded-full overflow-hidden p-0.5`}>
                                         <motion.div
-                                            className={`h-full ${plagiarismStatus === 'completed' ? (plagiarismPercent > 15 ? 'bg-red-500' : 'bg-indigo-500') : 'bg-primary'}`}
+                                            className={`h-full rounded-full ${plagiarismStatus === 'completed' ? (plagiarismPercent > 15 ? 'bg-red-500' : 'bg-emerald-500') : 'bg-primary'}`}
                                             initial={{ width: 0 }}
-                                            animate={{ width: plagiarismStatus === 'scanning' ? '70%' : (plagiarismStatus === 'completed' ? '100%' : '0%') }}
-                                            transition={{ duration: plagiarismStatus === 'scanning' ? 2 : 0.5 }}
+                                            animate={{ width: plagiarismStatus === 'scanning' ? '70%' : (plagiarismStatus === 'completed' ? `${plagiarismPercent}%` : '0%') }}
+                                            transition={{ duration: plagiarismStatus === 'scanning' ? 3 : 0.8, ease: "circOut" }}
                                         />
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <p className={`text-xs ${t.muted} font-medium`}>
-                                            {plagiarismStatus === 'ready' && 'Automatic scan will start after upload.'}
-                                            {plagiarismStatus === 'scanning' && 'Comparing with global database...'}
-                                            {plagiarismStatus === 'completed' && `${plagiarismPercent}% similarity detected.`}
+                                    <div className="flex justify-between items-center bg-primary/5 p-4 rounded-2xl">
+                                        <p className={`text-xs ${t.muted} font-bold leading-relaxed pr-8`}>
+                                            {plagiarismStatus === 'ready' && 'Upload a document to start the AI-powered integrity scan.'}
+                                            {plagiarismStatus === 'scanning' && 'Cross-referencing with 4.2 billion web pages and journals...'}
+                                            {plagiarismStatus === 'completed' && plagiarismPercent > 15 ? 'High similarity detected. Please review citations.' : 'Your work is effectively original. Great job!'}
                                         </p>
                                         {plagiarismStatus === 'completed' && (
-                                            <p className={`text-xl font-black ${plagiarismPercent > 15 ? 'text-red-500' : 'text-indigo-500'}`}>
+                                            <p className={`text-3xl font-black ${plagiarismPercent > 15 ? 'text-red-500' : 'text-emerald-500'} tabular-nums`}>
                                                 {plagiarismPercent}%
                                             </p>
                                         )}
@@ -545,37 +552,38 @@ export const AssignmentSubmissionView: React.FC<{ theme: any }> = ({ theme: t })
                                 </div>
                             </motion.div>
 
-                            <div className={`${t.card} p-8 rounded-[2.5rem] shadow-sm border ${t.border} space-y-6`}>
+                            <div className={`${t.card} p-7 lg:p-8 rounded-[2.5rem] lg:rounded-[3rem] shadow-sm border ${t.border} space-y-7 group`}>
                                 <div className="flex justify-between items-start">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-3 bg-green-50 text-green-500 rounded-2xl">
-                                            <TreePine size={20} />
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl shadow-sm">
+                                            <TreePine size={24} />
                                         </div>
                                         <div>
-                                            <h4 className={`font-black ${t.heading}`}>Eco Impact</h4>
-                                            <p className={`text-xs font-bold ${t.muted} uppercase tracking-widest`}>Digital Submission</p>
+                                            <h4 className={`text-lg font-black ${t.heading}`}>Eco-Savings</h4>
+                                            <p className={`text-[10px] font-black ${t.muted} uppercase tracking-[0.2em]`}>Digital Footprint</p>
                                         </div>
                                     </div>
-                                    <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-full">
-                                        Level 4
+                                    <span className="px-4 py-1.5 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-full shadow-sm">
+                                        Eco Level 4
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-8 bg-primary/5 p-5 lg:p-6 rounded-[2rem] border border-primary/10">
                                     <div className="flex-1">
-                                        <div className={`text-3xl font-black ${t.heading} mb-1`}>
-                                            <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                                                {co2Saved.toFixed(1)}g
+                                        <div className={`text-4xl font-black ${t.heading} mb-1 flex items-baseline gap-1`}>
+                                            <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-primary">
+                                                {co2Saved.toFixed(1)}
                                             </motion.span>
+                                            <span className="text-lg">g</span>
                                         </div>
-                                        <p className={`text-xs ${t.muted} leading-relaxed max-w-[180px]`}>
-                                            CO2 saved by submitting this assignment digitally instead of printing.
+                                        <p className={`text-xs ${t.muted} font-bold leading-relaxed`}>
+                                            CO2 emissions prevented by bypassing the paper-based submission cycle.
                                         </p>
                                     </div>
-                                    <div className={`w-20 h-20 rounded-full border-4 ${t.search} flex items-center justify-center relative`}>
+                                    <div className={`w-20 h-20 lg:w-24 lg:h-24 rounded-full border-4 ${t.search} flex items-center justify-center relative shadow-sm`}>
                                         <svg className="w-full h-full -rotate-90">
-                                            <circle cx="40" cy="40" r="34" fill="none" stroke={t.border.includes('slate-100') ? '#F1F5F9' : '#334155'} strokeWidth="8" />
+                                            <circle cx="50%" cy="50%" r="42%" fill="none" stroke={t.border.includes('slate-100') ? '#F1F5F9' : '#334155'} strokeWidth="8" />
                                             <motion.circle
-                                                cx="40" cy="40" r="34" fill="none" stroke="#primary" strokeWidth="8"
+                                                cx="50%" cy="50%" r="42%" fill="none" stroke="#primary" strokeWidth="8"
                                                 strokeDasharray="213"
                                                 initial={{ strokeDashoffset: 213 }}
                                                 animate={{ strokeDashoffset: 213 - (213 * (co2Saved / 25)) }}
@@ -584,7 +592,7 @@ export const AssignmentSubmissionView: React.FC<{ theme: any }> = ({ theme: t })
                                             />
                                         </svg>
                                         <div className="absolute inset-0 flex items-center justify-center">
-                                            <Leaf className="text-primary" size={24} />
+                                            <Leaf className="text-primary group-hover:scale-125 transition-transform duration-500" size={28} />
                                         </div>
                                     </div>
                                 </div>
