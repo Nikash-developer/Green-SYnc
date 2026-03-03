@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Leaf, Mail, Lock, BadgeCheck, ArrowRight, ShieldCheck,
   ChevronLeft, User, GraduationCap, Building2, AlertCircle,
-  CheckCircle2, Send, Eye, EyeOff, Sparkles
+  CheckCircle2, Send, Eye, EyeOff, Sparkles, Github
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
@@ -12,9 +12,13 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
-  updateProfile
+  updateProfile,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
+
 const loginBgImg = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80&auto=format&fit=crop';
 
 type ViewState = 'login' | 'forgot-password' | 'signup';
@@ -46,7 +50,6 @@ export default function LoginPage() {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const firebaseUser = userCredential.user;
 
-        // Fetch detailed user profile from Firestore
         const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
@@ -63,21 +66,17 @@ export default function LoginPage() {
           else if (userData.role === 'admin') navigate('/admin');
           else navigate('/faculty');
         } else {
-          // If profile hasn't been created yet, allow access but prompt for setup or use defaults
           navigate('/student');
         }
       } else if (view === 'forgot-password') {
         await sendPasswordResetEmail(auth, email);
         setSuccess('Password reset link sent to your email!');
       } else {
-        // Signup Flow
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const firebaseUser = userCredential.user;
 
-        // Update display name
         await updateProfile(firebaseUser, { displayName: fullName });
 
-        // Create detailed profile in Firestore
         const profileData = {
           name: fullName,
           email: email,
@@ -117,6 +116,51 @@ export default function LoginPage() {
     }
   };
 
+  const handleSocialSignIn = async (providerType: 'google' | 'github') => {
+    setIsLoading(true);
+    setError('');
+    const provider = providerType === 'google' ? new GoogleAuthProvider() : new GithubAuthProvider();
+
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
+
+      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+
+      if (!userDoc.exists()) {
+        const profileData = {
+          name: firebaseUser.displayName || 'User',
+          email: firebaseUser.email || '',
+          role: 'student',
+          department: 'General',
+          idNumber: 'SOCIAL-' + firebaseUser.uid.substring(0, 5),
+          createdAt: new Date().toISOString(),
+          eco_stats: {
+            total_pages_saved: 0,
+            total_water_saved: 0,
+            total_co2_prevented: 0,
+          }
+        };
+        await setDoc(doc(db, 'users', firebaseUser.uid), profileData);
+        login({ id: firebaseUser.uid, ...profileData } as any);
+      } else {
+        const userData = userDoc.data();
+        login({ id: firebaseUser.uid, ...userData } as any);
+      }
+
+      const userData = (await getDoc(doc(db, 'users', firebaseUser.uid))).data();
+      if (userData?.role === 'student') navigate('/student');
+      else if (userData?.role === 'admin') navigate('/admin');
+      else navigate('/faculty');
+
+    } catch (err: any) {
+      console.error('Social Login Error:', err);
+      setError('Social login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const roleInfo = {
     student: {
       title: 'Student Portal',
@@ -140,7 +184,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAF9] flex items-center justify-center p-4 md:p-6 font-sans">
-      {/* Back to Home */}
       <Link
         to="/"
         className="fixed top-8 left-8 flex items-center gap-2 text-slate-500 hover:text-primary font-bold transition-all group z-50"
@@ -157,7 +200,6 @@ export default function LoginPage() {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="w-full max-w-[1150px] bg-white rounded-[2.5rem] shadow-2xl shadow-primary/5 overflow-hidden flex flex-col md:flex-row min-h-[700px] border border-slate-100"
       >
-        {/* Left: Form Area */}
         <div className="w-full md:w-1/2 p-8 lg:p-12 flex flex-col overflow-y-auto max-h-[90vh] md:max-h-none">
           <div className="mb-10 flex items-center gap-3 group">
             <div className="p-2 bg-primary/10 rounded-xl text-primary transform group-hover:rotate-12 transition-transform">
@@ -186,6 +228,32 @@ export default function LoginPage() {
                       ? 'Enter your registered email to receive a password recovery link.'
                       : 'Provide your details to set up your new Green-Sync account instantly.'}
                 </p>
+              </div>
+
+              {(view === 'login' || view === 'signup') && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                  <button
+                    type="button"
+                    onClick={() => handleSocialSignIn('google')}
+                    className="flex items-center justify-center gap-3 py-3 px-4 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-bold text-sm text-slate-700 shadow-sm group"
+                  >
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                    Google
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSocialSignIn('github')}
+                    className="flex items-center justify-center gap-3 py-3 px-4 bg-slate-900 border border-slate-900 rounded-xl hover:bg-slate-800 transition-all font-bold text-sm text-white shadow-sm group"
+                  >
+                    <Github size={20} className="text-white" />
+                    GitHub
+                  </button>
+                </div>
+              )}
+
+              <div className="relative mb-8 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
+                <span className="relative px-4 bg-white">or use email</span>
               </div>
 
               {error && (
@@ -413,7 +481,6 @@ export default function LoginPage() {
           </AnimatePresence>
         </div>
 
-        {/* Right: Visual Side */}
         <div className="hidden md:block w-1/2 bg-[#111827] relative overflow-hidden">
           <motion.img
             initial={{ scale: 1.1, opacity: 0 }}
@@ -473,7 +540,6 @@ export default function LoginPage() {
             </motion.div>
           </div>
 
-          {/* Decorative Elements */}
           <div className="absolute top-10 right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
           <div className="absolute bottom-10 left-10 w-48 h-48 bg-primary/5 rounded-full blur-3xl" />
         </div>
