@@ -6,7 +6,8 @@ import {
   Zap, Plus, Download, ChevronRight, Users,
   CheckCircle2, Clock, AlertCircle, ArrowLeft, ArrowRight,
   Edit3, MessageSquare, Scissors, Type, Maximize2,
-  MoreVertical, Filter, SortDesc, Folder, ClipboardList, Droplets, User, X, Sparkles, Loader2
+  MoreVertical, Filter, SortDesc, Folder, ClipboardList, Droplets, User, X, Sparkles, Loader2,
+  ChevronLeft, Shield, Camera
 } from 'lucide-react';
 import CountUp from 'react-countup';
 import { useAuth } from '../AuthContext';
@@ -21,6 +22,7 @@ export default function FacultyDashboard() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNewAssignmentModal, setShowNewAssignmentModal] = useState(false);
+  const [settingsSubTab, setSettingsSubTab] = useState<'main' | 'profile' | 'notifications' | 'security' | 'appearance'>('main');
   const [newAssignmentCourse, setNewAssignmentCourse] = useState("Env Science 101");
   const [assignmentFiles, setAssignmentFiles] = useState<File[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -160,7 +162,7 @@ export default function FacultyDashboard() {
           </div>
         </div>
         <nav className="hidden lg:flex items-center gap-8 relative mr-8">
-          {['Notices', 'Assignments', 'Students'].map(nav => (
+          {['Notices', 'Assignments', 'Students', 'Settings'].map(nav => (
             <button
               key={nav}
               onClick={() => setActiveNav(nav)}
@@ -198,10 +200,10 @@ export default function FacultyDashboard() {
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{user?.role || "Faculty"}</p>
                     </div>
                     <div className="p-2 space-y-1">
-                      <button onClick={() => { setShowProfileMenu(false); handleShowToast("Profile context opened"); }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 rounded-xl transition-colors text-sm font-bold text-slate-700">
+                      <button onClick={() => { setShowProfileMenu(false); setActiveNav('Settings'); setSettingsSubTab('profile'); }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 rounded-xl transition-colors text-sm font-bold text-slate-700">
                         <User size={16} /> Edit Profile
                       </button>
-                      <button onClick={() => { setShowProfileMenu(false); handleShowToast("Settings context opened"); }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 rounded-xl transition-colors text-sm font-bold text-slate-700">
+                      <button onClick={() => { setShowProfileMenu(false); setActiveNav('Settings'); setSettingsSubTab('main'); }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 rounded-xl transition-colors text-sm font-bold text-slate-700">
                         <Settings size={16} /> Settings
                       </button>
                     </div>
@@ -251,17 +253,12 @@ export default function FacultyDashboard() {
                   { id: 'Notices', label: 'Notices', icon: <Bell size={20} /> },
                   { id: 'Assignments', label: 'Assignments', icon: <ClipboardList size={20} /> },
                   { id: 'Students', label: 'Student List', icon: <Users size={20} /> },
-                  { id: 'Stats', label: 'Eco Stats', icon: <TreePine size={20} /> },
                   { id: 'Settings', label: 'Settings', icon: <Settings size={20} /> }
                 ].map((item) => (
                   <button
                     key={item.id}
                     onClick={() => {
-                      if (['Notices', 'Assignments', 'Students'].includes(item.id)) {
-                        setActiveNav(item.id);
-                      } else {
-                        handleShowToast(`${item.label} module coming soon`);
-                      }
+                      setActiveNav(item.id);
                       setIsMobileMenuOpen(false);
                     }}
                     className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeNav === item.id
@@ -606,6 +603,104 @@ export default function FacultyDashboard() {
             >
               <FacultyNotices />
             </motion.div>
+          ) : activeNav === 'Settings' ? (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 max-w-4xl mx-auto w-full p-4 lg:p-8 space-y-8 pb-32 overflow-y-auto styled-scrollbar"
+            >
+              <div className="flex items-center gap-4 mb-8">
+                {settingsSubTab !== 'main' && (
+                  <button
+                    onClick={() => setSettingsSubTab('main')}
+                    className="p-2 bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 text-slate-600 transition-colors"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                )}
+                <h1 className="text-3xl lg:text-4xl font-black text-slate-900 capitalize">
+                  {settingsSubTab === 'main' ? 'Settings' : settingsSubTab}
+                </h1>
+              </div>
+
+              <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                <AnimatePresence mode="wait">
+                  {settingsSubTab === 'main' && (
+                    <motion.div
+                      key="settings-main"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                    >
+                      {[
+                        { id: 'profile', icon: <User />, label: 'Profile Information', desc: 'Update your personal details and avatar' },
+                        { id: 'notifications', icon: <Bell />, label: 'Notifications', desc: 'Manage how you receive alerts and updates' },
+                        { id: 'security', icon: <Shield />, label: 'Security', desc: 'Change password and account access' },
+                        { id: 'appearance', icon: <Droplets />, label: 'Appearance', desc: 'Customize the dashboard theme and layout' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          onClick={() => setSettingsSubTab(opt.id as any)}
+                          className="w-full p-6 flex items-center justify-between hover:bg-slate-50 transition-all border-b border-slate-50 last:border-0 group"
+                        >
+                          <div className="flex items-center gap-6">
+                            <div className="p-4 bg-[#F8F9FA] text-slate-400 group-hover:bg-[#DCFCE7] group-hover:text-[#22C55E] rounded-2xl transition-all">
+                              {opt.icon}
+                            </div>
+                            <div className="text-left">
+                              <p className="text-base font-black text-slate-900">{opt.label}</p>
+                              <p className="text-xs font-bold text-slate-400 mt-0.5">{opt.desc}</p>
+                            </div>
+                          </div>
+                          <ChevronRight size={20} className="text-slate-300 group-hover:text-[#22C55E] group-hover:translate-x-1 transition-all" />
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+
+                  {settingsSubTab === 'profile' && (
+                    <motion.div
+                      key="settings-profile"
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="p-8 space-y-8"
+                    >
+                      <div className="flex flex-col sm:flex-row items-center gap-8 mb-4">
+                        <div className="relative group">
+                          <div className="w-24 h-24 rounded-[2.5rem] bg-slate-100 border-4 border-white shadow-xl overflow-hidden">
+                            <img src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=prof`} alt="Avatar" />
+                          </div>
+                          <button className="absolute -bottom-1 -right-1 p-2.5 bg-[#22C55E] text-white rounded-xl shadow-lg hover:scale-110 transition-transform">
+                            <User size={14} />
+                          </button>
+                        </div>
+                        <div className="text-center sm:text-left">
+                          <h3 className="text-2xl font-black text-slate-900">{user?.name || "Professor Sarah"}</h3>
+                          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">{user?.role || "Senior Faculty"}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Display Name</label>
+                          <input type="text" defaultValue={user?.name || "Dr. Sarah Jenkins"} className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-[#DCFCE7] font-bold text-slate-900 transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Contact Email</label>
+                          <input type="email" defaultValue="sarah.j@university.edu" className="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-[#DCFCE7] font-bold text-slate-900 transition-all" />
+                        </div>
+                      </div>
+
+                      <button onClick={() => handleShowToast("Profile Updated Successfully")} className="w-full py-4 bg-[#22C55E] text-white rounded-2xl font-black shadow-lg shadow-[#22C55E]/20 hover:scale-[1.02] transition-all">Save Profile Changes</button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <motion.div
@@ -894,11 +989,11 @@ function StudentListView({ stats }: { stats: any }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Class Performance Graph */}
-        <div className="lg:col-span-2 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8 flex flex-col">
-          <div className="flex items-center justify-between mb-10">
+        <div className="lg:col-span-2 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-4 lg:p-8 flex flex-col min-h-[400px]">
+          <div className="flex items-center justify-between mb-8 lg:mb-10">
             <div>
-              <h3 className="text-xl font-black text-slate-900">Class Performance Trend</h3>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Average Grades % over time</p>
+              <h3 className="text-lg lg:text-xl font-black text-slate-900">Class Performance Trend</h3>
+              <p className="text-[10px] lg:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Average grades % over time</p>
             </div>
             <div className="flex gap-2">
               <span className="flex items-center gap-2 text-[10px] font-black text-slate-400 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
@@ -907,31 +1002,31 @@ function StudentListView({ stats }: { stats: any }) {
             </div>
           </div>
 
-          <div className="flex-1 flex items-end justify-between gap-4 h-72 relative pt-12">
+          <div className="flex-1 flex items-end justify-between gap-2 lg:gap-4 h-64 lg:h-72 relative pt-12 pb-2">
             {/* Grid lines */}
-            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8 pt-12">
+            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-10 pt-12">
               {[0, 25, 50, 75, 100].map(val => (
-                <div key={val} className="w-full border-t border-slate-100 flex items-center relative">
-                  <span className="absolute -left-10 text-[9px] font-bold text-slate-300">{val}%</span>
+                <div key={val} className="w-full border-t border-slate-50 flex items-center relative">
+                  <span className="absolute -left-0 lg:-left-10 text-[8px] lg:text-[9px] font-bold text-slate-200">{val}%</span>
                 </div>
               ))}
             </div>
 
             {performanceData.map((val, idx) => (
-              <div key={idx} className="flex-1 flex flex-col items-center gap-4 group cursor-pointer relative z-10 h-full justify-end">
+              <div key={idx} className="flex-1 flex flex-col items-center gap-3 lg:gap-4 group cursor-pointer relative z-10 h-full justify-end">
                 <div className="w-full flex-1 flex flex-col justify-end min-h-0">
                   <motion.div
                     initial={{ height: "0%" }}
                     animate={{ height: `${val}%` }}
-                    transition={{ duration: 1, delay: idx * 0.1, type: "spring", bounce: 0.2 }}
-                    className="w-full bg-gradient-to-t from-[#E8F5E9] to-[#22C55E] rounded-t-2xl relative overflow-hidden shadow-sm group-hover:brightness-105 group-hover:shadow-lg transition-all"
+                    transition={{ duration: 1, delay: idx * 0.1, type: "spring", bounce: 0.1 }}
+                    className="w-full bg-gradient-to-t from-[#E8F5E9] to-[#22C55E] rounded-t-xl lg:rounded-t-2xl relative overflow-hidden shadow-sm group-hover:brightness-105 group-hover:shadow-lg transition-all"
                   >
-                    <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[10px] font-black text-white bg-black/30 backdrop-blur-md px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[9px] lg:text-[10px] font-black text-white bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                       {val}%
                     </div>
                   </motion.div>
                 </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{months[idx]}</span>
+                <span className="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-widest">{months[idx]}</span>
               </div>
             ))}
           </div>
