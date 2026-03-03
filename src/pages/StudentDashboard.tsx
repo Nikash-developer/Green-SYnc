@@ -1460,6 +1460,15 @@ export default function StudentDashboard() {
       }
     }
   };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" }
+    }
+  };
   const siteNotifications = useMemo(() => {
     const items: { id: string, originalId: number, type: 'notice' | 'assignment', title: string, subtitle: string, time: string, isUnread: boolean, isUrgent: boolean, rawDate: number }[] = [];
 
@@ -1575,15 +1584,12 @@ export default function StudentDashboard() {
 
               if (target) {
                 setActiveTab('dashboard');
-                // Temporarily set active for highlight effect, handleAssignmentAction also sets it if starting, but we just want to focus it
                 setActiveAssignmentId(target.id);
 
-                // Allow DOM to update tab visibility, then scroll smoothly
                 setTimeout(() => {
                   const el = document.getElementById(`assignment-${target.id}`);
                   if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    // Provide a smooth engaging pulse animation
                     el.animate([
                       { boxShadow: '0 0 0 0 rgba(34, 197, 94, 0.7)' },
                       { boxShadow: '0 0 0 25px rgba(34, 197, 94, 0)' }
@@ -1594,12 +1600,12 @@ export default function StudentDashboard() {
                 alert("You have no pending assignments! Great job.");
               }
             }}
-            className="flex items-center gap-2 bg-[#22C55E] text-white px-4 lg:px-5 py-2 lg:py-2.5 rounded-full font-bold text-xs lg:text-sm hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#22C55E]/30 group"
+            className="flex items-center justify-center bg-[#22C55E] text-white p-2 lg:px-5 lg:py-2.5 rounded-xl lg:rounded-full font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#22C55E]/30 group"
           >
-            <Upload size={16} className="group-hover:-translate-y-0.5 transition-transform" />
-            <span className="hidden sm:inline">Quick Upload</span>
+            <Upload size={18} className="lg:w-4 lg:h-4 group-hover:-translate-y-0.5 transition-transform" />
+            <span className="hidden lg:inline ml-2">Quick Upload</span>
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 lg:gap-3">
             <button
               onClick={() => setShowNotifications(true)}
               className={`p-2 ${t.muted} hover:${t.accent} transition-colors relative`}
@@ -1609,15 +1615,21 @@ export default function StudentDashboard() {
                 <span className={`absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 ${t.header} animate-pulse`} />
               )}
             </button>
-          </div>
-          <div className={`flex items-center gap-3 ${t.search} px-5 py-2 rounded-2xl border ${t.border}`}>
-            <div className="text-right hidden sm:block">
-              <p className={`text-[10px] font-black ${t.muted} uppercase tracking-widest leading-tight mb-0.5`}>Welcome back</p>
-              <p className={`text-sm font-black ${t.heading} leading-tight`}>{studentProfile.name}</p>
+            <div className={`hidden sm:flex items-center gap-3 ${t.search} px-5 py-2 rounded-2xl border ${t.border}`}>
+              <div className="text-right">
+                <p className={`text-[10px] font-black ${t.muted} uppercase tracking-widest leading-tight mb-0.5`}>Welcome back</p>
+                <p className={`text-sm font-black ${t.heading} leading-tight`}>{studentProfile.name}</p>
+              </div>
+              <div
+                onClick={() => setShowProfile(true)}
+                className={`w-10 h-10 rounded-full ${t.search} overflow-hidden border-2 border-white/50 shadow-md cursor-pointer hover:scale-105 transition-transform`}
+              >
+                <img src={studentProfile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              </div>
             </div>
             <div
               onClick={() => setShowProfile(true)}
-              className={`w-10 h-10 rounded-full ${t.search} overflow-hidden border-2 border-white/50 shadow-md cursor-pointer hover:scale-105 transition-transform`}
+              className="sm:hidden w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 shadow-sm cursor-pointer active:scale-95 transition-transform"
             >
               <img src={studentProfile.avatar} alt="Avatar" className="w-full h-full object-cover" />
             </div>
@@ -1641,24 +1653,24 @@ export default function StudentDashboard() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className={`fixed top-0 left-0 bottom-0 w-[280px] ${t.sidebar} z-[101] lg:hidden shadow-2xl p-6 flex flex-col gap-8 overflow-y-auto styled-scrollbar`}
+              className={`fixed top-0 left-0 bottom-0 w-[300px] ${t.sidebar} backdrop-blur-xl bg-opacity-95 z-[101] lg:hidden shadow-2xl p-7 flex flex-col h-full overflow-y-auto scrollbar-hide`}
             >
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-10">
                 <div className="flex items-center gap-3">
-                  <div className="bg-primary p-2 rounded-xl">
+                  <div className="bg-primary p-2.5 rounded-2xl shadow-lg shadow-primary/20">
                     <Leaf size={24} className="text-white" />
                   </div>
-                  <span className={`text-xl font-black italic ${t.heading}`}>Green-Sync</span>
+                  <span className={`text-2xl font-black italic tracking-tight ${t.heading}`}>Green-Sync</span>
                 </div>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`p-2 ${t.muted}`}
+                  className={`p-2.5 ${t.search} rounded-xl ${t.muted}`}
                 >
                   <X size={24} />
                 </button>
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2.5 flex-1">
                 {[
                   { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
                   { id: 'courses', label: 'My Courses', icon: <BookOpen size={20} /> },
@@ -1674,22 +1686,32 @@ export default function StudentDashboard() {
                       setActiveTab(item.id as Tab);
                       setIsMobileMenuOpen(false);
                     }}
-                    className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all ${activeTab === item.id
-                      ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                      : t.navInactive}`}
+                    className={`flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-sm transition-all group ${activeTab === item.id
+                      ? `${t.navActive} border border-primary/10 shadow-sm`
+                      : `${t.navInactive} border border-transparent`
+                      }`}
                   >
-                    {item.icon}
+                    <span className={`${activeTab === item.id ? 'text-primary' : t.muted} group-hover:scale-110 transition-transform`}>{item.icon}</span>
                     {item.label}
                   </button>
                 ))}
               </div>
 
-              <div className={`mt-auto p-6 ${t.accentBg} rounded-3xl border ${t.border}`}>
-                <p className={`text-[10px] font-black ${t.muted} uppercase tracking-widest mb-2`}>Eco Rank</p>
-                <div className="flex items-center justify-between">
-                  <span className={`text-2xl font-black ${t.heading}`}>#12</span>
-                  <Trophy className="text-primary" size={20} />
+              <div className="mt-8 flex flex-col gap-4">
+                <div className={`p-6 ${t.accentBg} rounded-3xl border ${t.border}`}>
+                  <p className={`text-[10px] font-black ${t.muted} uppercase tracking-widest mb-2`}>Your Eco Rank</p>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-3xl font-black ${t.heading}`}>#12</span>
+                    <Trophy className="text-primary" size={24} />
+                  </div>
                 </div>
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="w-full flex items-center gap-4 px-5 py-5 rounded-2xl font-bold text-sm text-red-500 bg-red-50 hover:bg-red-100 transition-all border border-red-100/50"
+                >
+                  <LogOut size={18} />
+                  Sign Out
+                </button>
               </div>
             </motion.div>
           </>
@@ -1705,22 +1727,54 @@ export default function StudentDashboard() {
               initial="hidden"
               animate="visible"
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-8"
+              className="space-y-6 lg:space-y-10"
             >
+              {/* Mobile Welcome & Quick Stats */}
+              <motion.div variants={itemVariants} className="lg:hidden flex flex-col gap-6 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className={`text-2xl font-black ${t.heading}`}>Hello,</h1>
+                    <p className={`text-4xl font-black text-primary`}>{studentProfile.name.split(' ')[0]}!</p>
+                  </div>
+                  <div className={`p-4 ${t.card} rounded-3xl border ${t.border} shadow-sm flex flex-col items-center justify-center min-w-[100px]`}>
+                    <span className="text-2xl font-black text-primary">A+</span>
+                    <span className={`text-[10px] font-black ${t.muted} uppercase tracking-widest`}>Eco Rank</span>
+                  </div>
+                </div>
+
+                {/* Quick Action Pills */}
+                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide no-scrollbar -mx-4 px-4">
+                  {[
+                    { id: 'papers', label: 'Papers', icon: <FileQuestion size={16} /> },
+                    { id: 'notes', label: 'Notes', icon: <BookOpen size={16} /> },
+                    { id: 'courses', label: 'Study', icon: <LayoutDashboard size={16} /> },
+                    { id: 'eco-tracker', label: 'Impact', icon: <TreePine size={16} /> }
+                  ].map(action => (
+                    <button
+                      key={action.id}
+                      onClick={() => setActiveTab(action.id as Tab)}
+                      className={`flex items-center gap-2 px-6 py-3.5 rounded-2xl whitespace-nowrap font-black text-xs transition-all border ${t.border} ${t.search} hover:scale-105 active:scale-95 shadow-sm`}
+                    >
+                      <span className="text-primary">{action.icon}</span>
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
                 {/* Left Column */}
                 <div className="lg:col-span-8 space-y-8">
                   {/* Notice Feed */}
-                  <section className={`${t.card} p-5 lg:p-8 rounded-3xl lg:rounded-[2rem] shadow-sm border ${t.border}`}>
-                    <div className="flex items-center justify-between mb-6 lg:mb-8">
-                      <h2 className={`text-lg lg:text-xl font-black ${t.heading} flex items-center gap-2 lg:gap-3`}>
+                  <motion.section variants={itemVariants} className={`${t.card} p-5 lg:p-8 rounded-3xl lg:rounded-[2.5rem] shadow-sm border ${t.border}`}>
+                    <div className="flex items-center justify-between mb-6 lg:mb-8 px-1">
+                      <h2 className={`text-lg lg:text-xl font-black ${t.heading} flex items-center gap-2.5`}>
                         <BellRing className="text-primary w-5 h-5 lg:w-6 lg:h-6" />
                         Live Notice Feed
                       </h2>
                       <button
                         onClick={() => setShowAllNotices(true)}
-                        className="text-sm font-bold text-primary hover:underline transition-all"
+                        className="text-xs lg:text-sm font-bold text-primary hover:underline transition-all"
                       >
                         View All
                       </button>
@@ -1734,17 +1788,17 @@ export default function StudentDashboard() {
                           <NoticeItem key={notice.id} notice={notice} theme={t} />
                         ))}
                     </div>
-                  </section>
+                  </motion.section>
 
                   {/* Assignments */}
-                  <section className={`${t.card} p-8 rounded-[2rem] shadow-sm border ${t.border}`}>
-                    <div className="flex items-center justify-between mb-8">
-                      <h2 className={`text-xl font-black ${t.heading} flex items-center gap-3`}>
-                        <CheckCircle2 className="text-primary" />
-                        Upcoming Assignments
+                  <motion.section variants={itemVariants} className={`${t.card} p-5 lg:p-8 rounded-3xl lg:rounded-[2.5rem] shadow-sm border ${t.border}`}>
+                    <div className="flex items-center justify-between mb-6 lg:mb-8 px-1">
+                      <h2 className={`text-lg lg:text-xl font-black ${t.heading} flex items-center gap-2.5`}>
+                        <CheckCircle2 className="text-primary w-5 h-5 lg:w-6 lg:h-6" />
+                        Upcoming Tasks
                       </h2>
                     </div>
-                    <div className="grid grid-cols-1 gap-6">
+                    <div className="grid grid-cols-1 gap-5">
                       {assignments
                         .filter(a => a.title.toLowerCase().includes(searchQuery.toLowerCase()) || a.subject.toLowerCase().includes(searchQuery.toLowerCase()))
                         .sort((a, b) => {
@@ -1768,19 +1822,19 @@ export default function StudentDashboard() {
                           />
                         ))}
                     </div>
-                  </section>
+                  </motion.section>
                 </div>
 
                 {/* Right Column */}
                 <div className="lg:col-span-4 space-y-8">
                   {/* Leaderboard */}
-                  <section className={`${t.card} p-8 rounded-[2rem] shadow-sm border ${t.border}`}>
-                    <div className="flex items-center justify-between mb-8">
-                      <h2 className={`text-xl font-black flex items-center gap-3 ${t.heading}`}>
-                        <Trophy className={t.accent} />
-                        Dept. Eco-Leaderboard
+                  <motion.section variants={itemVariants} className={`${t.card} p-5 lg:p-8 rounded-3xl lg:rounded-[2.5rem] shadow-sm border ${t.border}`}>
+                    <div className="flex items-center justify-between mb-6 lg:mb-8 px-1">
+                      <h2 className={`text-lg lg:text-xl font-black flex items-center gap-3 ${t.heading}`}>
+                        <Trophy className={`${t.accent} w-5 h-5 lg:w-6 lg:h-6`} />
+                        Eco-Leaderboard
                       </h2>
-                      <LayoutDashboard className={t.muted} size={20} />
+                      <LayoutDashboard className={`${t.muted} hidden lg:block`} size={20} />
                     </div>
                     <div className="space-y-4">
                       {[
@@ -1801,14 +1855,14 @@ export default function StudentDashboard() {
                         />
                       ))}
                     </div>
-                    <div className={`mt-10 pt-8 border-t ${t.border}`}>
-                      <div className="bg-primary/5 p-8 rounded-[2rem] text-center border border-primary/10">
-                        <p className={`text-[10px] font-bold ${t.muted} uppercase tracking-widest mb-2`}>Your Department Rank</p>
-                        <p className="text-5xl font-black text-primary mb-2">#{(user?.department === 'Biology' || user?.department === 'History' || user?.department === 'Math' || user?.department === 'CS') ? '1-4' : '5'}</p>
-                        <p className={`text-xs font-bold ${t.muted}`}>{user?.department || 'Computer Engineering'}</p>
+                    <div className={`mt-8 pt-6 lg:mt-10 lg:pt-8 border-t ${t.border}`}>
+                      <div className="bg-primary/5 p-6 lg:p-8 rounded-3xl lg:rounded-[2rem] text-center border border-primary/10">
+                        <p className={`text-[9px] lg:text-[10px] font-bold ${t.muted} uppercase tracking-widest mb-1 lg:mb-2`}>Your Department Rank</p>
+                        <p className="text-4xl lg:text-5xl font-black text-primary mb-1 lg:mb-2">#{(user?.department === 'Biology' || user?.department === 'History' || user?.department === 'Math' || user?.department === 'CS') ? '1-4' : '5'}</p>
+                        <p className={`text-[10px] lg:text-xs font-bold ${t.muted}`}>{user?.department || 'Computer Engineering'}</p>
                       </div>
                     </div>
-                  </section>
+                  </motion.section>
                 </div>
               </div>
             </motion.div>
