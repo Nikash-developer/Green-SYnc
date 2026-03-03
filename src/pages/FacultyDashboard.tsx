@@ -787,16 +787,78 @@ export default function FacultyDashboard() {
 
 // Student ListView Component
 function StudentListView({ stats }: { stats: any }) {
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
   const students = [
-    { id: 1, name: "Alice Johnson", major: "Env. Science", gpa: 3.8, performance: 92, attendance: "98%", status: "Excellent", assignments: 12, ecoPoints: 450 },
-    { id: 2, name: "Bob Smith", major: "Civil Engineering", gpa: 3.5, performance: 85, attendance: "92%", status: "Good", assignments: 10, ecoPoints: 320 },
-    { id: 3, name: "Charlie Brown", major: "Architecture", gpa: 2.9, performance: 72, attendance: "85%", status: "Average", assignments: 8, ecoPoints: 150 },
-    { id: 4, name: "Diana Prince", major: "Biology", gpa: 3.7, performance: 88, attendance: "95%", status: "Good", assignments: 11, ecoPoints: 380 },
-    { id: 5, name: "Evan Wright", major: "Computer Science", gpa: 3.2, performance: 80, attendance: "90%", status: "Average", assignments: 9, ecoPoints: 210 },
-    { id: 6, name: "Fiona Gallagher", major: "Humanities", gpa: 3.9, performance: 95, attendance: "99%", status: "Excellent", assignments: 13, ecoPoints: 520 },
-    { id: 7, name: "George Miller", major: "Env. Science", gpa: 3.4, performance: 82, attendance: "91%", status: "Good", assignments: 10, ecoPoints: 290 },
-    { id: 8, name: "Hannah Lee", major: "Geology", gpa: 3.6, performance: 84, attendance: "93%", status: "Good", assignments: 11, ecoPoints: 340 }
+    {
+      id: 1, name: "Alice Johnson", major: "Env. Science", gpa: 3.8, performance: 92, attendance: "98%", status: "Excellent", assignments: 12, ecoPoints: 450,
+      grades: [
+        { subject: "Ecosystems", score: 95, color: "#22C55E" },
+        { subject: "Geology", score: 88, color: "#3B82F6" },
+        { subject: "Chemistry", score: 91, color: "#F59E0B" },
+        { subject: "Biology", score: 94, color: "#10B981" }
+      ],
+      bio: "Top performer in environmental research. Highly active in green campus initiatives."
+    },
+    {
+      id: 2, name: "Bob Smith", major: "Civil Eng.", gpa: 3.5, performance: 85, attendance: "92%", status: "Good", assignments: 10, ecoPoints: 320,
+      grades: [
+        { subject: "Structures", score: 82, color: "#3B82F6" },
+        { subject: "Materials", score: 87, color: "#F59E0B" },
+        { subject: "Surveying", score: 85, color: "#22C55E" },
+        { subject: "Math", score: 86, color: "#6366F1" }
+      ],
+      bio: "Strong analytical skills. Excels in practical laboratory sessions."
+    },
+    {
+      id: 3, name: "Charlie Brown", major: "Architecture", gpa: 2.9, performance: 72, attendance: "85%", status: "Average", assignments: 8, ecoPoints: 150,
+      grades: [
+        { subject: "Design", score: 75, color: "#F59E0B" },
+        { subject: "History", score: 70, color: "#6366F1" },
+        { subject: "CAD", score: 74, color: "#22C55E" },
+        { subject: "Physics", score: 68, color: "#EF4444" }
+      ],
+      bio: "Creative thinker, needs to focus more on theoretical assessments."
+    },
+    {
+      id: 4, name: "Diana Prince", major: "Biology", gpa: 3.7, performance: 88, attendance: "95%", status: "Good", assignments: 11, ecoPoints: 380,
+      grades: [
+        { subject: "Genetics", score: 90, color: "#10B981" },
+        { subject: "Botany", score: 86, color: "#22C55E" },
+        { subject: "Zoology", score: 89, color: "#F59E0B" },
+        { subject: "Lab", score: 87, color: "#3B82F6" }
+      ],
+      bio: "Excellent lab work and documentation skills."
+    },
+    {
+      id: 5, name: "Evan Wright", major: "Comp Science", gpa: 3.2, performance: 80, attendance: "90%", status: "Average", assignments: 9, ecoPoints: 210,
+      grades: [
+        { subject: "Coding", score: 85, color: "#6366F1" },
+        { subject: "DS", score: 78, color: "#F59E0B" },
+        { subject: "OS", score: 82, color: "#10B981" },
+        { subject: "DB", score: 75, color: "#3B82F6" }
+      ],
+      bio: "Passionate about software development, working on improving data structure logic."
+    },
+    {
+      id: 6, name: "Fiona Gallagher", major: "Humanities", gpa: 3.9, performance: 95, attendance: "99%", status: "Excellent", assignments: 13, ecoPoints: 520,
+      grades: [
+        { subject: "History", score: 98, color: "#F59E0B" },
+        { subject: "Sociology", score: 94, color: "#6366F1" },
+        { subject: "Ethics", score: 96, color: "#10B981" },
+        { subject: "Phil", score: 92, color: "#22C55E" }
+      ],
+      bio: "Extraordinary writing skills. Frequently assists peers in ethics debates."
+    },
+    { id: 7, name: "George Miller", major: "Env. Science", gpa: 3.4, performance: 82, attendance: "91%", status: "Good", assignments: 10, ecoPoints: 290, grades: [{ subject: "Ecosystems", score: 84, color: "#22C55E" }, { subject: "Geology", score: 80, color: "#3B82F6" }], bio: "Steady progress in core subjects." },
+    { id: 8, name: "Hannah Lee", major: "Geology", gpa: 3.6, performance: 84, attendance: "93%", status: "Good", assignments: 11, ecoPoints: 340, grades: [{ subject: "Earth Sci", score: 88, color: "#3B82F6" }, { subject: "Mapping", score: 82, color: "#10B981" }], bio: "Strong research and analytical skills." },
+    { id: 9, name: "Ivan Drago", major: "Physics", gpa: 3.8, performance: 90, attendance: "96%", status: "Excellent", assignments: 12, ecoPoints: 410, grades: [{ subject: "Quantum", score: 92, color: "#6366F1" }, { subject: "Thermo", score: 88, color: "#EF4444" }], bio: "Highly focused on advanced physics." },
+    { id: 10, name: "Julie Chen", major: "Mathematics", gpa: 4.0, performance: 98, attendance: "100%", status: "Excellent", assignments: 14, ecoPoints: 580, grades: [{ subject: "Calculus", score: 100, color: "#10B981" }, { subject: "Algebra", score: 96, color: "#3B82F6" }], bio: "Remarkable aptitude for mathematics." },
+    { id: 11, name: "Kevin Hart", major: "Sociology", gpa: 3.1, performance: 78, attendance: "88%", status: "Average", assignments: 9, ecoPoints: 190, grades: [{ subject: "Research", score: 80, color: "#F59E0B" }, { subject: "Society", score: 76, color: "#6366F1" }], bio: "Good social insight but needs to focus on papers." },
+    { id: 12, name: "Lara Croft", major: "History", gpa: 3.7, performance: 89, attendance: "94%", status: "Good", assignments: 11, ecoPoints: 360, grades: [{ subject: "Global Hist", score: 91, color: "#F59E0B" }, { subject: "Anthr", score: 87, color: "#10B981" }], bio: "Excellent archive researcher." },
+    { id: 13, name: "Marcus Aurelius", major: "Philosophy", gpa: 3.9, performance: 94, attendance: "97%", status: "Excellent", assignments: 13, ecoPoints: 480, grades: [{ subject: "Logic", score: 96, color: "#6366F1" }, { subject: "Ethics", score: 93, color: "#22C55E" }], bio: "Profound thinker, highly articulated." },
+    { id: 14, name: "Nina Simone", major: "Arts", gpa: 3.5, performance: 86, attendance: "95%", status: "Good", assignments: 10, ecoPoints: 310, grades: [{ subject: "Curating", score: 88, color: "#F59E0B" }, { subject: "Theory", score: 84, color: "#3B82F6" }], bio: "Highly creative with unique perspectives." }
   ];
 
   const filteredStudents = students.filter(s =>
@@ -892,11 +954,11 @@ function StudentListView({ stats }: { stats: any }) {
 
           <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm flex items-center justify-between group hover:border-[#22C55E]/30 transition-all cursor-pointer">
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Environmental Impact</p>
-              <h3 className="text-2xl font-black text-slate-900">{stats.pages * 0.5} <span className="text-sm font-bold text-slate-400">kg CO2</span></h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Students</p>
+              <h3 className="text-2xl font-black text-slate-900">{students.length} <span className="text-sm font-bold text-slate-400">Total</span></h3>
             </div>
             <div className="w-14 h-14 bg-[#E8F5E9] text-[#22C55E] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <TreePine size={28} />
+              <Users size={28} />
             </div>
           </div>
         </div>
@@ -932,15 +994,16 @@ function StudentListView({ stats }: { stats: any }) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors group"
+                    onClick={() => setSelectedStudent(student)}
+                    className="border-b border-slate-50 last:border-0 hover:bg-[#F0FDF4]/30 transition-all duration-300 group cursor-pointer"
                   >
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-100 group-hover:scale-110 transition-transform">
+                        <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-100 group-hover:scale-110 group-hover:rotate-3 transition-all">
                           <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${student.name}`} alt="" />
                         </div>
                         <div>
-                          <p className="text-sm font-black text-slate-900">{student.name}</p>
+                          <p className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors">{student.name}</p>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{student.major}</p>
                         </div>
                       </div>
@@ -955,18 +1018,18 @@ function StudentListView({ stats }: { stats: any }) {
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex flex-col gap-1.5">
-                        <span className={`w-fit px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${student.status === 'Excellent' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                            student.status === 'Good' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
-                              'bg-amber-50 text-amber-600 border border-amber-100'
+                        <span className={`w-fit px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${student.status === 'Excellent' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm shadow-emerald-500/5' :
+                          student.status === 'Good' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                            'bg-amber-50 text-amber-600 border border-amber-100'
                           }`}>
                           {student.status}
                         </span>
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden w-20">
+                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden w-24">
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${student.performance}%` }}
-                              className={`h-full ${student.performance > 90 ? 'bg-emerald-500' : student.performance > 80 ? 'bg-blue-500' : 'bg-amber-500'}`}
+                              className={`h-full ${student.performance > 90 ? 'bg-emerald-500' : student.performance > 80 ? 'bg-blue-500' : 'bg-amber-500'} shadow-[0_0_8px_currentColor] brightness-110`}
                             />
                           </div>
                           <span className="text-[10px] font-black text-slate-900 tabular-nums">{student.performance}%</span>
@@ -975,14 +1038,14 @@ function StudentListView({ stats }: { stats: any }) {
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-[#E8F5E9] text-[#22C55E] rounded-xl">
-                          <TreePine size={16} />
+                        <div className="p-2.5 bg-[#E8F5E9] text-[#22C55E] rounded-xl group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
+                          <Sparkles size={16} />
                         </div>
                         <p className="text-xs font-black text-slate-700">{student.ecoPoints} <span className="text-slate-400 font-bold ml-0.5">pts</span></p>
                       </div>
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <button className="p-2.5 text-slate-400 hover:text-[#22C55E] hover:bg-[#E8F5E9] rounded-xl transition-all">
+                      <button className="p-2.5 text-slate-400 group-hover:text-[#22C55E] group-hover:translate-x-1 transition-all">
                         <ChevronRight size={20} />
                       </button>
                     </td>
@@ -993,7 +1056,112 @@ function StudentListView({ stats }: { stats: any }) {
           </table>
         </div>
       </div>
-    </div>
+
+      {/* Student Detail Modal */}
+      <AnimatePresence>
+        {selectedStudent && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedStudent(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 40 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 40 }}
+              className="relative w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              {/* Modal Header */}
+              <div className="p-8 pb-4 flex items-start justify-between">
+                <div className="flex items-center gap-6">
+                  <div className="w-20 h-20 rounded-[2rem] overflow-hidden border-4 border-slate-50 shadow-xl">
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedStudent.name}`} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-black text-slate-900">{selectedStudent.name}</h2>
+                    <p className="text-sm font-bold text-primary uppercase tracking-widest mt-1">{selectedStudent.major} • GPA: {selectedStudent.gpa}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedStudent(null)}
+                  className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-8 pt-4 styled-scrollbar space-y-8">
+                {/* Subject Grades */}
+                <section>
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Subject-wise Performance</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {selectedStudent.grades?.map((g: any, i: number) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="bg-slate-50/50 p-5 rounded-3xl border border-slate-100 space-y-3"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-black text-slate-700">{g.subject}</span>
+                          <span className="text-sm font-black tabular-nums" style={{ color: g.color }}>{g.score}%</span>
+                        </div>
+                        <div className="h-2 bg-white rounded-full overflow-hidden border border-slate-100">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${g.score}%` }}
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: g.color }}
+                          />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Behavioral & Engagement */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-[#F0FDF4] p-6 rounded-3xl border border-primary/10">
+                    <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest mb-2">Attendance</p>
+                    <p className="text-2xl font-black text-primary">{selectedStudent.attendance}</p>
+                  </div>
+                  <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100">
+                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Assignments</p>
+                    <p className="text-2xl font-black text-blue-600">{selectedStudent.assignments} <span className="text-xs">Done</span></p>
+                  </div>
+                </div>
+
+                {/* Bio/Notes */}
+                {selectedStudent.bio && (
+                  <section className="bg-slate-900 text-white p-6 rounded-[2rem] shadow-xl relative overflow-hidden group">
+                    <div className="absolute right-0 top-0 w-24 h-24 bg-primary/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
+                    <h3 className="text-xs font-black text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <Sparkles size={14} /> Professor's Notes
+                    </h3>
+                    <p className="text-sm font-medium leading-relaxed opacity-90">{selectedStudent.bio}</p>
+                  </section>
+                )}
+              </div>
+
+              {/* Action */}
+              <div className="p-8 bg-slate-50/80 border-t border-slate-100 flex gap-4">
+                <button className="flex-1 py-4 bg-primary text-white rounded-2xl font-black shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                  Send Direct Feedback
+                </button>
+                <button className="px-6 py-4 bg-white text-slate-600 rounded-2xl font-black border border-slate-200 hover:bg-slate-100 transition-all">
+                  Full Report
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div >
   );
 }
 
