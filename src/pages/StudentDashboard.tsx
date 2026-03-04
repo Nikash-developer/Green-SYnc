@@ -1080,14 +1080,32 @@ export default function StudentDashboard() {
         body: JSON.stringify({ topic })
       });
 
-      const data = await response.json();
-      if (data.questions) {
-        setActiveQuizQuestions(data.questions);
-        setQuizScore(0);
-        setCurrentQuizIndex(0);
-        setUserAnswers(new Array(data.questions.length).fill(null));
+      const contentType = response.headers.get("content-type");
+      if (!response.ok) {
+        let errorMessage = "Server error";
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } else {
+          const textError = await response.text();
+          console.error("Non-JSON Error:", textError);
+          errorMessage = `Server Error (${response.status}): ${textError.slice(0, 100)}...`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        if (data.questions) {
+          setActiveQuizQuestions(data.questions);
+          setQuizScore(0);
+          setCurrentQuizIndex(0);
+          setUserAnswers(new Array(data.questions.length).fill(null));
+        } else {
+          throw new Error("Invalid response format from server");
+        }
       } else {
-        throw new Error(data.error || "Failed to generate quiz");
+        throw new Error("Server did not return JSON. Please check backend logs.");
       }
     } catch (error: any) {
       console.error("Quiz Generation Error:", error);
