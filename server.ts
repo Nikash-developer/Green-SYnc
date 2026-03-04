@@ -104,5 +104,7 @@ async function setupApp() {
   }
 }
 
-setupApp();
+setupApp().catch((err) => {
+  console.error("setupApp failed:", err);
+});
 export default app;

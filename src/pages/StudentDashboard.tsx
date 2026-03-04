@@ -12,7 +12,6 @@ import {
   Sun, Moon, Trash2, Eye, RefreshCcw, Database,
   Bot, ArrowUpRight
 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 import confetti from 'canvas-confetti';
 import CountUp from 'react-countup';
 import { useAuth } from '../AuthContext';
