@@ -81,6 +81,16 @@ export default function FacultyDashboard() {
   const [assignmentFiles, setAssignmentFiles] = useState<File[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // New Assignment Form State
+  const [newAssignmentData, setNewAssignmentData] = useState({
+    title: "",
+    course: "Env Science 101",
+    customCourse: "",
+    deadline: "",
+    description: ""
+  });
+  const [isSubmittingAssignment, setIsSubmittingAssignment] = useState(false);
+
   const [themeMode, setThemeMode] = useState<'Light' | 'Dark' | 'Eco'>('Light');
   const [facultyProfile, setFacultyProfile] = useState({
     name: user?.name || 'Dr. Sarah Jenkins',
@@ -112,30 +122,81 @@ export default function FacultyDashboard() {
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Environmental Stats State
+  const [facultyAssignments, setFacultyAssignments] = useState<any[]>([]);
+  const [activeAsgId, setActiveAsgId] = useState<string | null>(null);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
+
   const [stats, setStats] = useState({
-    total: 45,
-    pending: 12,
+    total: 0,
+    pending: 0,
     pages: 225,
     water: 2250
   });
 
-  // Students Data State
-  const [students, setStudents] = useState([
-    { id: 1, name: "Alice Johnson", date: "Oct 24, 2:30 PM", status: "Pending", grade: "- / 100", rubric: { research: 28, clarity: 25, grammar: 18, relevance: 20 }, feedback: "Excellent work on integrating the sustainability concepts. Your analysis of urban density could be expanded slightly in the next assignment." },
-    { id: 2, name: "Bob Smith", date: "Oct 24, 4:15 PM", status: "Graded", grade: "92 / 100", rubric: { research: 29, clarity: 26, grammar: 17, relevance: 20 }, feedback: "Great points made." },
-    { id: 3, name: "Charlie Brown", date: "Oct 25, 9:00 AM", status: "Late", grade: "- / 100", rubric: { research: 20, clarity: 20, grammar: 15, relevance: 15 }, feedback: "" },
-    { id: 4, name: "Diana Prince", date: "Oct 24, 1:00 PM", status: "Graded", grade: "88 / 100", rubric: { research: 26, clarity: 25, grammar: 18, relevance: 19 }, feedback: "Solid arguments." },
-    { id: 5, name: "Evan Wright", date: "Oct 24, 3:45 PM", status: "Pending", grade: "- / 100", rubric: { research: 0, clarity: 0, grammar: 0, relevance: 0 }, feedback: "" },
-    { id: 6, name: "Fiona Gallagher", date: "Oct 24, 2:10 PM", status: "Graded", grade: "95 / 100", rubric: { research: 30, clarity: 28, grammar: 19, relevance: 18 }, feedback: "Outstanding." }
-  ]);
+  const activeAssignment = facultyAssignments.find(a => a._id === activeAsgId) || facultyAssignments[0];
+  const activeSubmission = submissions.find(s => s.id === activeStudentId) || submissions[0];
 
-  const [activeStudentId, setActiveStudentId] = useState(1);
-  const activeStudent = students.find(s => s.id === activeStudentId) || students[0];
-
-  // Grading State for active student
-  const [rubric, setRubric] = useState(activeStudent.rubric);
-  const [feedback, setFeedback] = useState(activeStudent.feedback);
+  // Grading State for active submission
+  const [rubric, setRubric] = useState({ research: 0, clarity: 0, grammar: 0, relevance: 0 });
+  const [feedback, setFeedback] = useState("");
   const totalScore = rubric.research + rubric.clarity + rubric.grammar + rubric.relevance;
+
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/assignments', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setFacultyAssignments(data);
+          if (data.length > 0) setActiveAsgId(data[0]._id);
+        }
+      } catch (err) {
+        console.error('Failed to fetch assignments', err);
+      }
+    };
+    fetchAssignments();
+  }, []);
+
+  useEffect(() => {
+    if (!activeAsgId) return;
+    const fetchSubmissions = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`/api/assignments/${activeAsgId}/submissions`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const mapped = data.map((s: any) => ({
+            ...s,
+            id: s._id,
+            name: s.student_name || 'Student',
+            date: new Date(s.submission_date).toLocaleString(),
+            status: s.status || 'Pending',
+            grade: s.status === 'Graded' ? `${s.grade} / 100` : '- / 100',
+            grade_val: s.grade || 0,
+            rubric: s.rubric || { research: 0, clarity: 0, grammar: 0, relevance: 0 },
+            feedback: s.feedback_text || ""
+          }));
+          setSubmissions(mapped);
+          if (mapped.length > 0) setActiveStudentId(mapped[0].id);
+
+          setStats(prev => ({
+            ...prev,
+            total: mapped.length,
+            pending: mapped.filter((s: any) => s.status !== 'Graded').length
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch submissions', err);
+      }
+    };
+    fetchSubmissions();
+  }, [activeAsgId]);
 
   // Document UI State
   const [zoom, setZoom] = useState(100);
@@ -153,7 +214,7 @@ export default function FacultyDashboard() {
   };
 
   const handleAIMock = () => {
-    if (activeStudent.status === 'Graded') return;
+    if (activeSubmission?.status === 'Graded') return;
     setIsAILoading(true);
     setShowAIBadge(false);
     setTimeout(() => {
@@ -164,13 +225,15 @@ export default function FacultyDashboard() {
     }, 1500);
   };
 
-  // Sync grading state when active student changes
+  // Sync grading state when active submission changes
   useEffect(() => {
-    setRubric(activeStudent.rubric);
-    setFeedback(activeStudent.feedback);
-    setHasHighlight(activeStudent.status !== 'Pending');
+    if (activeSubmission) {
+      setRubric(activeSubmission.rubric || { research: 0, clarity: 0, grammar: 0, relevance: 0 });
+      setFeedback(activeSubmission.feedback || "");
+      setHasHighlight(activeSubmission.status !== 'Pending');
+    }
     setShowAIBadge(false);
-  }, [activeStudentId]);
+  }, [activeStudentId, submissions]);
 
   // Actions
   const handleShowToast = (msg: string) => {
@@ -179,31 +242,102 @@ export default function FacultyDashboard() {
   };
 
   const handleSaveDraft = () => {
-    setStudents(prev => prev.map(s => s.id === activeStudentId ? { ...s, rubric, feedback } : s));
+    setSubmissions(prev => prev.map(s => s.id === activeStudentId ? { ...s, rubric, feedback } : s));
     handleShowToast("Draft saved successfully");
   };
 
-  const handleSubmitGrade = () => {
-    const isAlreadyGraded = activeStudent.status === 'Graded';
+  const handleSubmitGrade = async () => {
+    const isAlreadyGraded = activeSubmission.status === 'Graded';
 
-    setStudents(prev => prev.map(s =>
-      s.id === activeStudentId ? { ...s, status: 'Graded', grade: `${totalScore} / 100`, rubric, feedback } : s
-    ));
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/submissions/${activeStudentId}/grade`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          grade: totalScore,
+          feedback,
+          rubric
+        })
+      });
 
-    if (!isAlreadyGraded) {
-      setStats(prev => ({
-        ...prev,
-        pending: Math.max(0, prev.pending - 1),
-        pages: prev.pages + 5,
-        water: prev.water + 50
-      }));
+      if (res.ok) {
+        setSubmissions(prev => prev.map(s =>
+          s.id === activeStudentId ? { ...s, status: 'Graded', grade: `${totalScore} / 100`, rubric, feedback } : s
+        ));
+
+        if (!isAlreadyGraded) {
+          setStats(prev => ({
+            ...prev,
+            pending: Math.max(0, prev.pending - 1),
+            pages: prev.pages + 5,
+            water: prev.water + 50
+          }));
+        }
+
+        handleShowToast(isAlreadyGraded ? `Grade for ${activeSubmission?.name} updated successfully!` : `Grade for ${activeSubmission?.name} submitted successfully!`);
+      }
+    } catch (err) {
+      handleShowToast("Failed to submit grade. Network error.");
     }
-
-    handleShowToast(isAlreadyGraded ? `Grade for ${activeStudent.name} updated successfully!` : `Grade for ${activeStudent.name} submitted successfully!`);
   };
 
   const handleExport = () => {
     handleShowToast("Exporting report as PDF...");
+  };
+
+  const handlePublishAssignment = async () => {
+    const { title, course, customCourse, deadline, description } = newAssignmentData;
+
+    if (!title || !deadline) {
+      handleShowToast("Please fill in required fields (Title and Deadline)");
+      return;
+    }
+
+    const targetCourse = course === 'Other' ? customCourse : course;
+
+    try {
+      setIsSubmittingAssignment(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/assignments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title,
+          course: targetCourse,
+          deadline,
+          description,
+          target_department: facultyProfile.dept // Use faculty's department
+        })
+      });
+
+      if (res.ok) {
+        handleShowToast("New Assignment Created & Published!");
+        setShowNewAssignmentModal(false);
+        // Reset form
+        setNewAssignmentData({
+          title: "",
+          course: "Env Science 101",
+          customCourse: "",
+          deadline: "",
+          description: ""
+        });
+        setAssignmentFiles([]);
+      } else {
+        const err = await res.json();
+        handleShowToast(`Error: ${err.error || "Failed to create assignment"}`);
+      }
+    } catch (err) {
+      handleShowToast("Network error. Please try again.");
+    } finally {
+      setIsSubmittingAssignment(false);
+    }
   };
 
   return (
@@ -440,9 +574,16 @@ export default function FacultyDashboard() {
                   <div className={`p-6 border-b ${t.border} ${t.card} z-10 sticky top-0`}>
                     <div className="flex items-center justify-between mb-4">
                       <h2 className={`text-lg font-black ${t.heading}`}>Submissions</h2>
-                      <div className="flex items-center gap-1.5">
-                        <button onClick={() => handleShowToast("Filter options coming soon")} className={`p-2 ${t.muted} hover:${t.text} ${t.sidebarHover} rounded-xl transition-colors`}><Filter size={16} /></button>
-                        <button onClick={() => handleShowToast("Sorting options coming soon")} className={`p-2 ${t.muted} hover:${t.text} ${t.sidebarHover} rounded-xl transition-colors`}><SortDesc size={16} /></button>
+                      <div className="flex gap-2">
+                        <select
+                          value={activeAsgId || ''}
+                          onChange={(e) => setActiveAsgId(e.target.value)}
+                          className={`text-xs font-bold ${t.card} border ${t.border} px-3 py-1 rounded-xl outline-none focus:ring-1 focus:ring-emerald-500`}
+                        >
+                          {facultyAssignments.map(a => (
+                            <option key={a._id} value={a._id}>{a.title}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                     <div className="relative">
@@ -452,7 +593,10 @@ export default function FacultyDashboard() {
                   </div>
 
                   <div className="flex-1 overflow-y-auto styled-scrollbar p-3 space-y-3">
-                    {students.map((student) => (
+                    {submissions.length === 0 && (
+                      <div className="p-8 text-center text-slate-400 font-bold">No submissions yet</div>
+                    )}
+                    {submissions.map((student) => (
                       <motion.button
                         key={student.id}
                         whileHover={{ scale: 1.02 }}
@@ -532,9 +676,9 @@ export default function FacultyDashboard() {
                         <h2 className="text-xl lg:text-3xl font-black text-slate-900 mb-4 tracking-tight">Urban Sustainability & Green Spaces</h2>
                         <div className="flex items-center gap-3 text-xs lg:text-sm text-slate-500 font-bold">
                           <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-100">
-                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${activeStudent.name}`} alt="sc" />
+                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${activeSubmission?.name}`} alt="sc" />
                           </div>
-                          <span>{activeStudent.name}</span>
+                          <span>{activeSubmission?.name}</span>
                         </div>
                       </div>
 
@@ -635,10 +779,10 @@ export default function FacultyDashboard() {
 
                       <div className="flex flex-wrap gap-4 mt-6">
                         <motion.button
-                          whileHover={{ scale: activeStudent.status === 'Graded' || isAILoading ? 1 : 1.05 }}
-                          whileTap={{ scale: activeStudent.status === 'Graded' || isAILoading ? 1 : 0.95 }}
+                          whileHover={{ scale: activeSubmission?.status === 'Graded' || isAILoading ? 1 : 1.05 }}
+                          whileTap={{ scale: activeSubmission?.status === 'Graded' || isAILoading ? 1 : 0.95 }}
                           onClick={handleAIMock}
-                          disabled={activeStudent.status === 'Graded' || isAILoading}
+                          disabled={activeSubmission?.status === 'Graded' || isAILoading}
                           className="flex-shrink-0 px-4 py-3.5 bg-purple-50 hover:bg-purple-100 text-purple-600 text-sm font-bold rounded-2xl transition-all border border-purple-100 disabled:opacity-50 flex items-center gap-2 group shadow-sm hover:shadow-purple-100"
                         >
                           <Sparkles size={16} className="group-hover:text-purple-500 animate-pulse" /> Auto-Suggest
@@ -658,8 +802,8 @@ export default function FacultyDashboard() {
                           className="flex-1 py-3.5 bg-[#22C55E] hover:bg-[#16a34a] text-white text-sm font-black rounded-2xl transition-all shadow-lg shadow-[#22C55E]/30 group relative overflow-hidden min-w-[140px]"
                         >
                           <span className="relative z-10 block flex flex-row items-center justify-center gap-2">
-                            {activeStudent.status === 'Graded' ? 'Update Grade' : 'Submit Grade'}
-                            {!(activeStudent.status === 'Graded' && totalScore === parseInt(activeStudent.grade)) && (
+                            {activeSubmission?.status === 'Graded' ? 'Update Grade' : 'Submit Grade'}
+                            {!(activeSubmission?.status === 'Graded' && totalScore === activeSubmission?.grade_val) && (
                               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                             )}
                           </span>
@@ -970,25 +1114,34 @@ export default function FacultyDashboard() {
                 <div className="p-8 space-y-5">
                   <div>
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Assignment Title</label>
-                    <input type="text" placeholder="e.g. Midterm Report" className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all" />
+                    <input
+                      type="text"
+                      placeholder="e.g. Midterm Report"
+                      value={newAssignmentData.title}
+                      onChange={(e) => setNewAssignmentData(prev => ({ ...prev, title: e.target.value }))}
+                      className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all"
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Course</label>
                       <div className="space-y-3">
                         <select
-                          value={newAssignmentCourse}
-                          onChange={(e) => setNewAssignmentCourse(e.target.value)}
+                          value={newAssignmentData.course}
+                          onChange={(e) => setNewAssignmentData(prev => ({ ...prev, course: e.target.value }))}
                           className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all appearance-none"
                         >
                           <option>Env Science 101</option>
                           <option>Geology 201</option>
+                          <option>Computer Engineering</option>
                           <option value="Other">Other (Add Custom)</option>
                         </select>
-                        {newAssignmentCourse === 'Other' && (
+                        {newAssignmentData.course === 'Other' && (
                           <input
                             type="text"
                             placeholder="Type course name..."
+                            value={newAssignmentData.customCourse}
+                            onChange={(e) => setNewAssignmentData(prev => ({ ...prev, customCourse: e.target.value }))}
                             className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all"
                           />
                         )}
@@ -996,13 +1149,23 @@ export default function FacultyDashboard() {
                     </div>
                     <div>
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Due Date</label>
-                      <input type="date" className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all" />
+                      <input
+                        type="date"
+                        value={newAssignmentData.deadline}
+                        onChange={(e) => setNewAssignmentData(prev => ({ ...prev, deadline: e.target.value }))}
+                        className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-bold text-slate-900 transition-all"
+                      />
                     </div>
                   </div>
                   <div>
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Description & Resources</label>
                     <div className="relative group/desc">
-                      <textarea placeholder="Describe the assignment details..." className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-medium text-slate-700 h-28 resize-none transition-all pb-12" />
+                      <textarea
+                        placeholder="Describe the assignment details..."
+                        value={newAssignmentData.description}
+                        onChange={(e) => setNewAssignmentData(prev => ({ ...prev, description: e.target.value }))}
+                        className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#DCFCE7] focus:border-[#22C55E] font-medium text-slate-700 h-28 resize-none transition-all pb-12"
+                      />
                       <div className="absolute bottom-3 left-3 flex gap-2">
                         <button
                           onClick={() => fileInputRef.current?.click()}
@@ -1038,7 +1201,14 @@ export default function FacultyDashboard() {
                 </div>
                 <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
                   <button onClick={() => setShowNewAssignmentModal(false)} className="px-6 py-3 font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Cancel</button>
-                  <button onClick={() => { setShowNewAssignmentModal(false); handleShowToast("New Assignment Created Successfully!"); }} className="px-6 py-3 bg-[#22C55E] text-white font-black rounded-xl hover:bg-[#16a34a] shadow-lg shadow-[#22C55E]/30 transition-all">Publish Assignment</button>
+                  <button
+                    onClick={handlePublishAssignment}
+                    disabled={isSubmittingAssignment}
+                    className="px-6 py-3 bg-[#22C55E] text-white font-black rounded-xl hover:bg-[#16a34a] shadow-lg shadow-[#22C55E]/30 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isSubmittingAssignment ? <Loader2 className="animate-spin" size={18} /> : null}
+                    {isSubmittingAssignment ? "Publishing..." : "Publish Assignment"}
+                  </button>
                 </div>
               </motion.div>
             </div>

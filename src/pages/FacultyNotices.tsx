@@ -145,6 +145,44 @@ export default function FacultyNotices() {
         }
     }, [title, content]);
 
+    useEffect(() => {
+        const fetchNotices = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch('/api/notices', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const mapped: Notice[] = data.map((n: any) => ({
+                        id: n._id,
+                        title: n.title,
+                        content: n.body,
+                        date: new Date(n.createdAt).toLocaleDateString(),
+                        time: new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        author: n.author_name || 'Admin',
+                        priority: n.urgency_level === 'Emergency' ? 'Emergency' : 'Normal',
+                        status: 'Published',
+                        departments: [n.target_audience || 'All Students'],
+                        thumbnail: `https://api.dicebear.com/7.x/avataaars/svg?seed=${n.title}`
+                    }));
+                    setNotices(mapped);
+
+                    // Basic analytics estimation
+                    setAnalytics(prev => ({
+                        ...prev,
+                        views: mapped.length * 45,
+                        engagement: mapped.length > 0 ? 85 : 0,
+                        paper: mapped.length * 120
+                    }));
+                }
+            } catch (err) {
+                console.error('Failed to fetch notices', err);
+            }
+        };
+        fetchNotices();
+    }, []);
+
     const handleShowToast = (msg: string) => {
         setToastMessage(msg);
         setTimeout(() => setToastMessage(null), 3000);
@@ -167,7 +205,7 @@ export default function FacultyNotices() {
         setSelectedDepts(newSelection);
     };
 
-    const handlePublish = () => {
+    const handlePublish = async () => {
         if (!title.trim()) {
             handleShowToast("Please enter a notice title!");
             return;
@@ -175,38 +213,62 @@ export default function FacultyNotices() {
 
         const isScheduled = !!scheduleDate;
 
-        const newNotice: Notice = {
-            id: Date.now().toString(),
-            title,
-            content,
-            date: isScheduled ? new Date(scheduleDate).toLocaleDateString() : 'Just now',
-            time: isScheduled ? new Date(scheduleDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Right now',
-            author: 'Dr. Sarah Jenkins',
-            priority: isEmergency ? 'Emergency' : 'Normal',
-            status: isScheduled ? 'Scheduled' : 'Published',
-            departments: selectedDepts,
-            thumbnail: `https://api.dicebear.com/7.x/avataaars/svg?seed=${title}`
-        };
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/notices', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    title,
+                    body: content,
+                    urgency_level: isEmergency ? 'Emergency' : 'Low',
+                    target_audience: selectedDepts[0] // Simplify for now
+                })
+            });
 
-        setNotices([newNotice, ...notices]);
+            if (res.ok) {
+                const savedNotice = await res.json();
+                const newNotice: Notice = {
+                    id: savedNotice._id,
+                    title,
+                    content,
+                    date: isScheduled ? new Date(scheduleDate).toLocaleDateString() : 'Just now',
+                    time: isScheduled ? new Date(scheduleDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Right now',
+                    author: 'Faculty',
+                    priority: isEmergency ? 'Emergency' : 'Normal',
+                    status: isScheduled ? 'Scheduled' : 'Published',
+                    departments: selectedDepts,
+                    thumbnail: `https://api.dicebear.com/7.x/avataaars/svg?seed=${title}`
+                };
 
-        // Reset Form
-        setTitle("");
-        setContent("");
-        if (editorRef.current) editorRef.current.innerHTML = "";
-        setScheduleDate("");
-        setIsEmergency(false);
-        setSelectedDepts(['All Students']);
+                setNotices(prev => [newNotice, ...prev]);
 
-        if (!isScheduled) {
-            setAnalytics(prev => ({
-                views: prev.views + Math.floor(Math.random() * 50) + 10,
-                engagement: Math.min(100, prev.engagement + 1),
-                paper: prev.paper + (selectedDepts.includes('All Students') ? 120 : 30)
-            }));
+                // Reset Form
+                setTitle("");
+                setContent("");
+                if (editorRef.current) editorRef.current.innerHTML = "";
+                setScheduleDate("");
+                setIsEmergency(false);
+                setSelectedDepts(['All Students']);
+
+                if (!isScheduled) {
+                    setAnalytics(prev => ({
+                        views: prev.views + Math.floor(Math.random() * 50) + 10,
+                        engagement: Math.min(100, prev.engagement + 1),
+                        paper: prev.paper + (selectedDepts.includes('All Students') ? 120 : 30)
+                    }));
+                }
+
+                handleShowToast(isScheduled ? "Notice Scheduled Successfully!" : "Notice Published Successfully!");
+            } else {
+                handleShowToast("Failed to publish notice");
+            }
+        } catch (err) {
+            handleShowToast("Network error. Please try again.");
         }
-
-        handleShowToast(isScheduled ? "Notice Scheduled Successfully!" : "Notice Published Successfully!");
     };
 
     const filteredHistory = notices.filter(n => historyFilter === 'All' || n.status === historyFilter);

@@ -16,6 +16,7 @@ import { GoogleGenAI } from "@google/genai";
 import confetti from 'canvas-confetti';
 import CountUp from 'react-countup';
 import { useAuth } from '../AuthContext';
+import { io } from 'socket.io-client';
 import { calculateImpact } from '../lib/utils';
 import { Notice, Assignment } from '../types';
 
@@ -1009,23 +1010,7 @@ export default function StudentDashboard() {
     }, 1500);
   };
   const [courses, setCourses] = useState<Course[]>([]);
-  const [assignments, setAssignments] = useState<AssignmentWithFile[]>(() => {
-    const saved = localStorage.getItem('greensync_assignments');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((a: any) => ({
-            ...a,
-            uploadedFile: a.uploadedFileMeta ? new File([], a.uploadedFileMeta.name, { type: 'application/pdf' }) : undefined
-          }));
-        }
-      } catch (e) {
-        console.error("Failed to parse saved assignments", e);
-      }
-    }
-    return [];
-  });
+  const [assignments, setAssignments] = useState<AssignmentWithFile[]>([]);
   const [showQuickUpload, setShowQuickUpload] = useState(false);
   const [settingsSubTab, setSettingsSubTab] = useState<'main' | 'profile' | 'notifications' | 'security' | 'appearance' | 'help'>('main');
 
@@ -1294,6 +1279,56 @@ export default function StudentDashboard() {
       { id: 802, title: "Big Data Analytics", instructor: "Dr. V. Rao", progress: 0, color: "green", icon: <Database size={24} />, semester: 8, syllabus: ["Hadoop", "Spark", "NoSQL"], syllabusUrl: "/uploads/syllabus/comp-sem8.pdf" }
     ];
 
+    const fetchAssignments = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/assignments', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const mapped = data.map((a: any) => ({
+            id: a._id,
+            title: a.title,
+            description: a.description || '',
+            subject: a.course || 'General',
+            department: a.target_department || 'General',
+            deadline: a.deadline,
+            status: 'pending',
+            max_marks: 100
+          }));
+          setAssignments(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to fetch assignments', err);
+      }
+    };
+
+    const fetchNotices = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/notices', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const mapped = data.map((n: any) => ({
+            id: n._id,
+            title: n.title,
+            content: n.body,
+            publish_date: n.createdAt,
+            is_emergency: n.urgency_level === 'Emergency',
+            target_department: n.target_audience || 'General',
+            author_name: n.author_name || 'Admin',
+            engagement: n.engagement_rate || 0
+          }));
+          setNotices(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to fetch notices', err);
+      }
+    };
+
     const fetchPapers = async () => {
       try {
         const res = await fetch('/api/question-papers');
@@ -1308,67 +1343,121 @@ export default function StudentDashboard() {
       }
     };
 
-    setNotices(mockNotices);
-    // Only set assignments if none are saved or the saved list is empty
-    const saved = localStorage.getItem('greensync_assignments');
-    let hasSavedAssignments = false;
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        hasSavedAssignments = Array.isArray(parsed) && parsed.length > 0;
-      } catch (e) { }
-    }
-
-    if (!hasSavedAssignments) {
-      setAssignments(mockAssignments);
-    }
+    fetchNotices();
+    fetchAssignments();
     setCourses(mockCourses);
-
-    // Fetch real papers from DB instead of mocks, but keep mocks if fetch fails
     fetchPapers();
   }, []);
 
-  const handleAssignmentAction = (id: number, action: 'submit' | 'start') => {
-    setAssignments(prev => prev.map(a => {
-      if (a.id === id) {
-        if (action === 'start') {
-          setActiveAssignmentId(id);
-          const deadlineDate = new Date(a.deadline).getTime();
-          const now = Date.now();
-          const diffInSeconds = Math.max(0, Math.floor((deadlineDate - now) / 1000));
-          setTimeLeft(diffInSeconds);
-        }
-        if (action === 'submit' && a.id === 1 && !a.uploadedFile) {
-          alert('Please upload a PDF file before submitting.');
-          return a;
-        }
-        return { ...a, status: action === 'submit' ? 'submitted' : 'in-progress' };
-      }
-      return a;
-    }));
+  // Socket.io for Real-time assignments and notices
+  useEffect(() => {
+    const socket = io(window.location.origin);
 
+    socket.on('new_assignment', (assignment: any) => {
+      setAssignments(prev => {
+        if (prev.some(a => a.id === assignment._id)) return prev;
+
+        const newAsg: AssignmentWithFile = {
+          id: assignment._id,
+          title: assignment.title,
+          description: assignment.description || '',
+          subject: assignment.course || 'General',
+          department: assignment.target_department || 'General',
+          deadline: assignment.deadline,
+          status: 'pending',
+          max_marks: 100,
+          faculty_id: assignment.created_by
+        };
+        return [newAsg, ...prev];
+      });
+      console.log("New assignment received via socket:", assignment);
+    });
+
+    socket.on('new_notice', (notice: any) => {
+      setNotices(prev => {
+        if (prev.some(n => n.id === notice._id)) return prev;
+        const newNotice = {
+          id: notice._id,
+          title: notice.title,
+          content: notice.body,
+          publish_date: notice.createdAt || new Date().toISOString(),
+          is_emergency: notice.urgency_level === 'Emergency',
+          target_department: notice.target_audience || 'General',
+          author_name: 'Admin', // Default or handle populated if possible
+          engagement: 0
+        };
+        return [newNotice, ...prev];
+      });
+      console.log("New notice received via socket:", notice);
+    });
+
+    socket.on('notice_engagement_update', ({ noticeId, engagement }: any) => {
+      setNotices(prev => prev.map(n => n.id === noticeId ? { ...n, engagement } : n));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  const handleAssignmentAction = async (id: string | number, action: 'submit' | 'start') => {
     if (action === 'submit') {
       const assignment = assignments.find(a => a.id === id);
-      if (id === 1 && !assignment?.uploadedFile) return;
+      if (!assignment?.uploadedFile) {
+        alert('Please upload a PDF file before submitting.');
+        return;
+      }
 
-      setSubmissionCount(prev => prev + 1);
+      try {
+        const formData = new FormData();
+        formData.append('assignment_id', id.toString());
+        formData.append('file', assignment.uploadedFile);
 
-      // Eco Confetti
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#22C55E', '#16A34A', '#86EFAC', '#4ADE80'],
-        shapes: ['circle', 'square']
-      });
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
 
-      // alert(`Successfully submitted the assignment!`);
-    } else {
-      // alert(`Successfully started the assignment!`);
+        if (res.ok) {
+          setAssignments(prev => prev.map(a =>
+            a.id === id ? { ...a, status: 'submitted' } : a
+          ));
+          setSubmissionCount(prev => prev + 1);
+
+          confetti({
+            particleCount: 80,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#22C55E', '#16A34A', '#86EFAC', '#4ADE80']
+          });
+          alert("Assignment submitted successfully!");
+        } else {
+          const err = await res.json();
+          alert(`Submission failed: ${err.error || 'Unknown error'}`);
+        }
+      } catch (err) {
+        alert("Network error occurred during submission.");
+      }
+    } else if (action === 'start') {
+      setAssignments(prev => prev.map(a =>
+        a.id === id ? { ...a, status: 'in-progress' } : a
+      ));
+      setActiveAssignmentId(id);
+      const assignment = assignments.find(a => a.id === id);
+      if (assignment) {
+        const deadlineDate = new Date(assignment.deadline).getTime();
+        const now = Date.now();
+        const diffInSeconds = Math.max(0, Math.floor((deadlineDate - now) / 1000));
+        setTimeLeft(diffInSeconds);
+      }
     }
   };
 
-  const handleFileUpload = (id: number, file: File) => {
+  const handleFileUpload = (id: string | number, file: File) => {
     setAssignments(prev => prev.map(a => {
       if (a.id === id) {
         return { ...a, uploadedFile: file };
@@ -1456,7 +1545,7 @@ export default function StudentDashboard() {
     }
   };
 
-  const handleDeleteUpload = (id: number) => {
+  const handleDeleteUpload = (id: string | number) => {
     setAssignments(prev => prev.map(a => {
       if (a.id === id) {
         const { uploadedFile, ...rest } = a;

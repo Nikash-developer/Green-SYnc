@@ -18,7 +18,7 @@ export const createAssignment = async (req: any, res: any) => {
 
         const io = req.app.get('io');
         if (io) {
-            io.emit('new_assignment', assignment);
+            io.to('student').emit('new_assignment', assignment);
         }
 
         res.status(201).json(assignment);
@@ -53,11 +53,12 @@ export const getSubmissions = async (req: any, res: any) => {
 
 export const gradeSubmission = async (req: any, res: any) => {
     try {
-        const { grade, feedback } = req.body;
+        const { grade, feedback, rubric } = req.body;
         const sub = await Submission.findByIdAndUpdate(req.params.id, {
+            grade,
             feedback_text: feedback,
+            grading_rubric_scores: rubric,
             status: "Graded"
-            // grade isn't strictly in schema right now but let's mock the update requirement
         }, { new: true });
         res.json({ success: true, submission: sub });
     } catch (err: any) {
